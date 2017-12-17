@@ -9,7 +9,6 @@ const normalMatrix = mat3.create();
 
 const teapotShaderProgram = initShaderProgram(gl, teapotVert, teapotFrag);
 const teapotShaderLocations = {
-  program: teapotShaderProgram,
   attribLocations: {
     vertexPosition: gl.getAttribLocation(teapotShaderProgram, 'aVertexPosition'),
     textureCoord: gl.getAttribLocation(teapotShaderProgram, 'aTextureCoord'),
@@ -25,7 +24,6 @@ const teapotShaderLocations = {
 
 const planeShaderProgram = initShaderProgram(gl, planeVert, planeFrag);
 const planeShaderLocations = {
-  program: planeShaderProgram,
   attribLocations: {
     vertexPosition: gl.getAttribLocation(planeShaderProgram, 'aVertexPosition'),
     textureCoord: gl.getAttribLocation(planeShaderProgram, 'aTextureCoord'),
@@ -39,10 +37,37 @@ const planeShaderLocations = {
   },
 };
 
+const helperShaderProgram = initShaderProgram(gl, helperVert, helperFrag);
+const helperShaderLocations = {
+  attribLocations: {
+    vertexPosition: gl.getAttribLocation(helperShaderProgram, 'aVertexPosition')
+  },
+  uniformLocations: {
+    projectionMatrix: gl.getUniformLocation(helperShaderProgram, 'uProjectionMatrix'),
+    modelViewMatrix: gl.getUniformLocation(helperShaderProgram, 'uModelViewMatrix')
+  },
+};
+
 const noiseTexture = loadTexture(gl, './noise100x100.png');
 
-const lfCam = new LightFieldCamera(gl, vec3.fromValues(0, 0, 2), vec3.create(), Math.PI / 4, 1.0, 1000.0, 5, 0.3);
-const vCam = new Camera(gl, vec3.fromValues(0, 0, 3), vec3.fromValues(0,0,0), Math.PI / 4, 1.0, 1000.0, { x: 0, y: 0, w: gl.canvas.width, h: gl.canvas.height });
+const lfCam = new LightFieldCamera(gl,
+  vec3.fromValues(0, 0, 2),
+  vec3.create(),
+  Math.PI / 4,
+  1.0, 1000.0,
+  5,
+  0.3,
+  helperShaderProgram,
+  helperShaderLocations
+);
+
+const vCam = new Camera(gl,
+  vec3.fromValues(-2, 0, 5),
+  vec3.fromValues(0,0,1),
+  Math.PI / 4,
+  1.0, 1000.0,
+  { x: 0, y: 0, w: gl.canvas.width, h: gl.canvas.height }
+);
 
 const objRequest = new Request('./teapot-scaled.obj');
 const plnRequest = new Request('./plane.obj');
@@ -100,4 +125,5 @@ function drawScene() {
   gl.clearDepth(1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   vCam.render(sceneB);
+  lfCam.drawHelper();
 }

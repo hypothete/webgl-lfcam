@@ -69,3 +69,23 @@ const planeFrag = `
     gl_FragColor = vec4(texelColor.rgb, 1.0);
   }
 `;
+
+const helperVert = `
+  attribute vec4 aVertexPosition;
+
+  uniform mat4 uModelViewMatrix;
+  uniform mat4 uProjectionMatrix;
+
+  void main() {
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+    gl_PointSize = 4.0;
+  }
+`;
+
+const helperFrag = `
+  precision highp float;
+
+  void main() {
+    gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+  }
+`;

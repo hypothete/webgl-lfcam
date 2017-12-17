@@ -57,14 +57,40 @@ function Camera (gl, pos, tgt, fov, near, far, viewport) {
   return cam;
 }
 
-function LightFieldCamera (gl, pos, tgt, fov, near, far, side, spread) {
+function LightFieldCamera (gl, pos, tgt, fov, near, far, side, spread, helperProgram, helperLocations) {
   let cam = {
     pos,
     cameras: [],
+    camPosArray: [],
+    camPosBuffer: gl.createBuffer(),
+    shaderProgram: helperProgram,
+    shaderLocations: helperLocations,
     render: function (scene) {
       for (let camera of cam.cameras) {
         camera.render(scene);
       }
+    },
+    updateCamPosArray: function () {
+      cam.camPosArray = [];
+      for (let camera of cam.cameras) {
+        cam.camPosArray.push(camera.pos[0]);
+        cam.camPosArray.push(camera.pos[1]);
+        cam.camPosArray.push(camera.pos[2]);
+      }
+      gl.bindBuffer(gl.ARRAY_BUFFER, cam.camPosBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cam.camPosArray), gl.STATIC_DRAW);
+    },
+    drawHelper: function () {
+      gl.useProgram(cam.shaderProgram);
+
+      gl.uniformMatrix4fv(cam.shaderLocations.uniformLocations.projectionMatrix, false, projectionMatrix);
+      gl.uniformMatrix4fv(cam.shaderLocations.uniformLocations.modelViewMatrix, false, modelViewMatrix);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, cam.camPosBuffer);
+      gl.vertexAttribPointer(cam.shaderLocations.attribLocations.vertexPosition, 3, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(cam.shaderLocations.attribLocations.vertexPosition);
+
+      gl.drawArrays(gl.POINTS, 0, cam.camPosArray.length/3);
     }
   };
   // set up array of cameras
@@ -83,6 +109,7 @@ function LightFieldCamera (gl, pos, tgt, fov, near, far, side, spread) {
       cam.cameras.push(newCam);
     }
   }
+  cam.updateCamPosArray();
   return cam;
 }
 
