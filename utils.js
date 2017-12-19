@@ -60,6 +60,8 @@ function Camera (gl, pos, tgt, fov, near, far, viewport) {
 function LightFieldCamera (gl, pos, tgt, fov, near, far, side, spread, helperProgram, helperLocations) {
   let cam = {
     pos,
+    side,
+    spread,
     cameras: [],
     camPosArray: [],
     camPosBuffer: gl.createBuffer(),

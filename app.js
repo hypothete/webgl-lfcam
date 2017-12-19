@@ -18,7 +18,7 @@ const teapotShaderLocations = {
     projectionMatrix: gl.getUniformLocation(teapotShaderProgram, 'uProjectionMatrix'),
     modelViewMatrix: gl.getUniformLocation(teapotShaderProgram, 'uModelViewMatrix'),
     normalMatrix: gl.getUniformLocation(teapotShaderProgram, 'uNormalMatrix'),
-    uSampler: gl.getUniformLocation(teapotShaderProgram, 'uSampler'),
+    uSampler: gl.getUniformLocation(teapotShaderProgram, 'uSampler')
   },
 };
 
@@ -34,6 +34,8 @@ const planeShaderLocations = {
     modelViewMatrix: gl.getUniformLocation(planeShaderProgram, 'uModelViewMatrix'),
     normalMatrix: gl.getUniformLocation(planeShaderProgram, 'uNormalMatrix'),
     uSampler: gl.getUniformLocation(planeShaderProgram, 'uSampler'),
+    screenSize: gl.getUniformLocation(planeShaderProgram, 'screenSize'),
+    mapScale: gl.getUniformLocation(planeShaderProgram, 'mapScale')
   },
 };
 
@@ -48,7 +50,7 @@ const helperShaderLocations = {
   },
 };
 
-const noiseTexture = loadTexture(gl, './noise100x100.png');
+const noiseTexture = loadTexture(gl, './rednoise.png');
 
 const lfCam = new LightFieldCamera(gl,
   vec3.fromValues(0, 0, 2),
@@ -56,7 +58,7 @@ const lfCam = new LightFieldCamera(gl,
   Math.PI / 4,
   1.0, 1000.0,
   5,
-  0.3,
+  0.5,
   helperShaderProgram,
   helperShaderLocations
 );
@@ -98,6 +100,12 @@ Promise.all([
   plane.shaderLocations = planeShaderLocations;
   plane.texture = sceneAfb.texture;
 
+  const screenSize = new Float32Array([gl.canvas.width, gl.canvas.height]);
+  const mapScale = new Float32Array([lfCam.side, lfCam.side]);
+  gl.useProgram(plane.shaderProgram);
+  gl.uniform2fv(plane.shaderLocations.uniformLocations.screenSize, screenSize);
+  gl.uniform2fv(plane.shaderLocations.uniformLocations.mapScale, mapScale);
+
   sceneA.push(teapot);
   sceneB.push(plane);
   animate();
@@ -113,7 +121,7 @@ function drawScene() {
   gl.enable(gl.DEPTH_TEST);
 
   gl.bindFramebuffer(gl.FRAMEBUFFER, sceneAfb.buffer);
-  gl.clearColor(1.0, 0.0, 0.0, 1.0);
+  gl.clearColor(0.1, 0, 0.2, 1.0);
   gl.clearDepth(1.0);
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);

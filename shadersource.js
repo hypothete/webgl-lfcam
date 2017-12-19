@@ -61,11 +61,22 @@ const planeFrag = `
   precision highp float;
 
   uniform sampler2D uSampler;
+  uniform vec2 screenSize;
+  uniform vec2 mapScale;
 
   varying vec2 vTextureCoord;
 
   void main() {
-    vec4 texelColor = texture2D(uSampler, vTextureCoord);
+    vec2 tiny = gl_FragCoord.xy/(screenSize * mapScale);
+
+    if (tiny.x < 0.0 || tiny.x > 1.0 || tiny.y < 0.0 || tiny.y > 1.0) {
+      discard;
+    }
+    tiny = vTextureCoord;
+    vec4 texelColor = texture2D(uSampler, tiny);
+    vec2 mapOffset = vec2(4.0/mapScale.x, 0.0);
+    vec2 mapCoord = vTextureCoord/mapScale + mapOffset;
+    texelColor = texture2D(uSampler, mapCoord);
     gl_FragColor = vec4(texelColor.rgb, 1.0);
   }
 `;
