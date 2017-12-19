@@ -57,6 +57,32 @@ const planeVert = `
   }
 `;
 
+// const planeFrag = `
+//   precision highp float;
+//
+//   uniform sampler2D uSampler;
+//   uniform vec2 screenSize;
+//   uniform vec2 mapScale;
+//
+//   varying vec2 vTextureCoord;
+//
+//   void main() {
+//     vec2 tiny = gl_FragCoord.xy/(screenSize * mapScale);
+//
+//     if (tiny.x < 0.0 || tiny.x > 1.0 || tiny.y < 0.0 || tiny.y > 1.0) {
+//       discard;
+//     }
+//     tiny = vTextureCoord;
+//     vec4 texelColor = texture2D(uSampler, tiny);
+//     vec2 mapOffset = vec2(floor(mapScale.x/2.0), floor(mapScale.y/2.0)); //centered
+//     mapOffset = mapOffset + vec2(-2.0, 0.0);
+//     vec2 mapCoord = vTextureCoord/mapScale + mapOffset/mapScale;
+//     texelColor = texture2D(uSampler, mapCoord);
+//     texelColor.rg = texelColor.rg * gl_FragCoord.xy; // this is just pretty
+//     gl_FragColor = vec4(texelColor.rg/screenSize, 0.0, 1.0);
+//   }
+// `;
+
 const planeFrag = `
   precision highp float;
 
@@ -67,19 +93,24 @@ const planeFrag = `
   varying vec2 vTextureCoord;
 
   void main() {
-    vec2 tiny = gl_FragCoord.xy/(screenSize * mapScale);
+    vec2 targetUV  = gl_FragCoord.xy/screenSize;
+    vec2 sampleUV = targetUV;
+    vec2 dirVec = (sampleUV - vTextureCoord)*(-1.0, -1.0) + (0.5,0.5);
+    vec2 uvOffset = sampleUV/mapScale;
+    vec2 dirScale = dirVec * mapScale;
 
-    if (tiny.x < 0.0 || tiny.x > 1.0 || tiny.y < 0.0 || tiny.y > 1.0) {
-      discard;
-    }
-    tiny = vTextureCoord;
-    vec4 texelColor = texture2D(uSampler, tiny);
-    vec2 mapOffset = vec2(floor(mapScale.x/2.0), floor(mapScale.y/2.0)); //centered
-    mapOffset = mapOffset + vec2(-2.0, 0.0);
-    mapOffset = mapOffset / mapScale;
-    vec2 mapCoord = vTextureCoord/mapScale + mapOffset;
-    texelColor = texture2D(uSampler, mapCoord);
-    gl_FragColor = vec4(texelColor.rgb, 1.0);
+    vec2 minDir = floor(dirScale) / mapScale;
+    vec2 maxDir = ceil(dirScale) / mapScale;
+    vec2 weight = fract(dirScale);
+
+    vec3 colour1 = texture2D(uSampler, minDir + uvOffset).rgb;
+    vec3 colour2 = texture2D(uSampler, vec2(minDir.x, maxDir.y) + uvOffset).rgb;
+    vec3 colour3 = texture2D(uSampler, vec2(maxDir.x, minDir.y) + uvOffset).rgb;
+    vec3 colour4 = texture2D(uSampler, maxDir + uvOffset).rgb;
+
+    vec3 colour = mix(mix(colour1, colour3, weight.x), mix(colour2, colour4, weight.x), weight.y);
+
+    gl_FragColor = vec4(colour, 1.0);
   }
 `;
 

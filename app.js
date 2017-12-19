@@ -59,18 +59,18 @@ var noiseTexture;
 const lfCam = new LightFieldCamera(gl,
   vec3.fromValues(0, 0, 2),
   vec3.create(),
-  Math.PI / 4,
+  Math.PI / 2,
   1.0, 100.0,
   5,
-  0.5,
+  0.2,
   helperShaderProgram,
   helperShaderLocations
 );
 
 const vCam = new Camera(gl,
-  vec3.fromValues(0, 0, 5),
+  vec3.fromValues(0, 0, 3),
   vec3.fromValues(0,0,1),
-  Math.PI / 4,
+  Math.PI / 2,
   1.0, 100.0,
   { x: 0, y: 0, w: gl.canvas.width, h: gl.canvas.height }
 );
@@ -145,7 +145,7 @@ function drawScene() {
 
 function enableControls () {
   gl.canvas.onmousemove = function(e) {
-    vCam.pos[0] = -2 * (e.offsetX / gl.canvas.width) + 1;
-    vCam.pos[1] = 2 * (e.offsetY / gl.canvas.height) - 1;
+    vCam.pos[0] = (-2 * (e.offsetX / window.innerWidth) + 1) * 2;
+    vCam.pos[1] = (2 * (e.offsetY / window.innerHeight) - 1) * 2;
   };
 }
