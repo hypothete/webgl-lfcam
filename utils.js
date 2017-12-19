@@ -96,11 +96,11 @@ function LightFieldCamera (gl, pos, tgt, fov, near, far, side, spread, helperPro
     }
   };
   // set up array of cameras
-  let halfSide = side / 2;
+  let halfSide = Math.floor(side / 2);
   for (let i=0; i<side; i++) {
     for (let j=0; j<side; j++) {
       let camPos = vec3.create();
-      vec3.add(camPos, pos, vec3.fromValues((side - i - halfSide) * spread, (j - halfSide) * spread, 0));
+      vec3.add(camPos, pos, vec3.fromValues((i - halfSide) * spread, (j - halfSide) * spread, 0));
       let camView = {
         x: i * gl.canvas.width / side,
         y: j * gl.canvas.height / side,
@@ -170,13 +170,42 @@ function loadTexture (gl, url) {
   return texture;
 }
 
+function promiseTexture (gl, url) {
+  return new Promise(function (resolve) {
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA,
+                  1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+                  new Uint8Array([0, 0, 255, 255]));
+
+    const image = new Image();
+    image.onload = function() {
+      texture.image = image;
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA,
+                    gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+      if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+         gl.generateMipmap(gl.TEXTURE_2D);
+      }
+      else {
+         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      }
+      resolve(texture);
+    };
+    image.src = url;
+  });
+}
+
 function makeGenericTexture (gl) {
   var texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   return texture;
 }
 

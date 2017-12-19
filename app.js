@@ -7,6 +7,10 @@ const modelViewMatrix = mat4.create();
 const projectionMatrix = mat4.create();
 const normalMatrix = mat3.create();
 
+const upVec = vec3.fromValues(0,1,0)
+const rightVec = vec3.fromValues(1,0,0);
+const forwardVec = vec3.cross(vec3.create(), upVec, rightVec);
+
 const teapotShaderProgram = initShaderProgram(gl, teapotVert, teapotFrag);
 const teapotShaderLocations = {
   attribLocations: {
@@ -50,13 +54,13 @@ const helperShaderLocations = {
   },
 };
 
-const noiseTexture = loadTexture(gl, './rednoise.png');
+var noiseTexture;
 
 const lfCam = new LightFieldCamera(gl,
   vec3.fromValues(0, 0, 2),
   vec3.create(),
   Math.PI / 4,
-  1.0, 1000.0,
+  1.0, 100.0,
   5,
   0.5,
   helperShaderProgram,
@@ -64,10 +68,10 @@ const lfCam = new LightFieldCamera(gl,
 );
 
 const vCam = new Camera(gl,
-  vec3.fromValues(-2, 0, 5),
+  vec3.fromValues(0, 0, 5),
   vec3.fromValues(0,0,1),
   Math.PI / 4,
-  1.0, 1000.0,
+  1.0, 100.0,
   { x: 0, y: 0, w: gl.canvas.width, h: gl.canvas.height }
 );
 
@@ -84,17 +88,18 @@ Promise.all([
 .then((bundle) => {
   return Promise.all([
     bundle[0].text(),
-    bundle[1].text()
+    bundle[1].text(),
+    promiseTexture(gl, './rednoise.png')
   ]);
 })
-.then((bundleText) => {
-  teapot = new OBJ.Mesh(bundleText[0]);
+.then((secondBundle) => {
+  teapot = new OBJ.Mesh(secondBundle[0]);
   OBJ.initMeshBuffers(gl, teapot);
   teapot.shaderProgram = teapotShaderProgram;
   teapot.shaderLocations = teapotShaderLocations;
-  teapot.texture = noiseTexture;
+  teapot.texture = secondBundle[2];
 
-  plane = new OBJ.Mesh(bundleText[1]);
+  plane = new OBJ.Mesh(secondBundle[1]);
   OBJ.initMeshBuffers(gl, plane);
   plane.shaderProgram = planeShaderProgram;
   plane.shaderLocations = planeShaderLocations;
@@ -108,6 +113,11 @@ Promise.all([
 
   sceneA.push(teapot);
   sceneB.push(plane);
+
+  gl.enable(gl.CULL_FACE);
+  gl.enable(gl.DEPTH_TEST);
+  drawMap();
+  enableControls();
   animate();
 
   function animate () {
@@ -116,22 +126,26 @@ Promise.all([
   }
 });
 
-function drawScene() {
-  gl.enable(gl.CULL_FACE);
-  gl.enable(gl.DEPTH_TEST);
-
+function drawMap () {
   gl.bindFramebuffer(gl.FRAMEBUFFER, sceneAfb.buffer);
   gl.clearColor(0.1, 0, 0.2, 1.0);
   gl.clearDepth(1.0);
-
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  //gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   lfCam.render(sceneA);
-
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+
+function drawScene() {
   gl.clearColor(0.0, 0.0, 1.0, 1.0);
   gl.clearDepth(1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   vCam.render(sceneB);
   lfCam.drawHelper();
+}
+
+function enableControls () {
+  gl.canvas.onmousemove = function(e) {
+    vCam.pos[0] = -2 * (e.offsetX / gl.canvas.width) + 1;
+    vCam.pos[1] = 2 * (e.offsetY / gl.canvas.height) - 1;
+  };
 }

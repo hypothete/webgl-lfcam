@@ -74,7 +74,9 @@ const planeFrag = `
     }
     tiny = vTextureCoord;
     vec4 texelColor = texture2D(uSampler, tiny);
-    vec2 mapOffset = vec2(4.0/mapScale.x, 0.0);
+    vec2 mapOffset = vec2(floor(mapScale.x/2.0), floor(mapScale.y/2.0)); //centered
+    mapOffset = mapOffset + vec2(-2.0, 0.0);
+    mapOffset = mapOffset / mapScale;
     vec2 mapCoord = vTextureCoord/mapScale + mapOffset;
     texelColor = texture2D(uSampler, mapCoord);
     gl_FragColor = vec4(texelColor.rgb, 1.0);
