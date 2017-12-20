@@ -39,6 +39,31 @@ const teapotFrag = `
   }
 `;
 
+const planeUVVert = `
+  attribute vec4 aVertexPosition;
+  attribute vec2 aTextureCoord;
+
+  uniform mat4 uModelViewMatrix;
+  uniform mat4 uProjectionMatrix;
+
+  varying vec2 vTextureCoord;
+
+  void main() {
+    vTextureCoord = aTextureCoord;
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+  }
+`;
+
+const planeUVFrag = `
+  precision highp float;
+
+  varying vec2 vTextureCoord;
+
+  void main() {
+    gl_FragColor = vec4(vTextureCoord, 0.0, 1.0);
+  }
+`;
+
 const planeVert = `
   attribute vec2 aTextureCoord;
   attribute vec4 aVertexPosition;
@@ -67,19 +92,24 @@ const planeVert = `
 //   varying vec2 vTextureCoord;
 //
 //   void main() {
-//     vec2 tiny = gl_FragCoord.xy/(screenSize * mapScale);
+//     vec2 targetUV  = gl_FragCoord.xy/screenSize;
+//     vec2 sampleUV = targetUV;
+//     vec2 dirVec = (sampleUV - vTextureCoord)*vec2(1.0, 1.0) + vec2(0.5,0.5);
+//     vec2 uvOffset = sampleUV/mapScale;
+//     vec2 dirScale = dirVec * mapScale;
 //
-//     if (tiny.x < 0.0 || tiny.x > 1.0 || tiny.y < 0.0 || tiny.y > 1.0) {
-//       discard;
-//     }
-//     tiny = vTextureCoord;
-//     vec4 texelColor = texture2D(uSampler, tiny);
-//     vec2 mapOffset = vec2(floor(mapScale.x/2.0), floor(mapScale.y/2.0)); //centered
-//     mapOffset = mapOffset + vec2(-2.0, 0.0);
-//     vec2 mapCoord = vTextureCoord/mapScale + mapOffset/mapScale;
-//     texelColor = texture2D(uSampler, mapCoord);
-//     texelColor.rg = texelColor.rg * gl_FragCoord.xy; // this is just pretty
-//     gl_FragColor = vec4(texelColor.rg/screenSize, 0.0, 1.0);
+//     vec2 minDir = floor(dirScale) / mapScale;
+//     vec2 maxDir = ceil(dirScale) / mapScale;
+//     vec2 weight = fract(dirScale);
+//
+//     vec3 colour1 = texture2D(uSampler, minDir + uvOffset).rgb;
+//     vec3 colour2 = texture2D(uSampler, vec2(minDir.x, maxDir.y) + uvOffset).rgb;
+//     vec3 colour3 = texture2D(uSampler, vec2(maxDir.x, minDir.y) + uvOffset).rgb;
+//     vec3 colour4 = texture2D(uSampler, maxDir + uvOffset).rgb;
+//
+//     vec3 colour = mix(mix(colour1, colour3, weight.x), mix(colour2, colour4, weight.x), weight.y);
+//     // colour = texture2D(uSampler, gl_FragCoord.xy/screenSize).rgb;
+//     gl_FragColor = vec4(colour, 1.0);
 //   }
 // `;
 
@@ -95,7 +125,7 @@ const planeFrag = `
   void main() {
     vec2 targetUV  = gl_FragCoord.xy/screenSize;
     vec2 sampleUV = targetUV;
-    vec2 dirVec = (sampleUV - vTextureCoord)*(-1.0, -1.0) + (0.5,0.5);
+    vec2 dirVec = (sampleUV - vTextureCoord)*vec2(1.0, 1.0) + vec2(0.5,0.5);
     vec2 uvOffset = sampleUV/mapScale;
     vec2 dirScale = dirVec * mapScale;
 
@@ -109,7 +139,7 @@ const planeFrag = `
     vec3 colour4 = texture2D(uSampler, maxDir + uvOffset).rgb;
 
     vec3 colour = mix(mix(colour1, colour3, weight.x), mix(colour2, colour4, weight.x), weight.y);
-
+    colour = texture2D(uSampler, vTextureCoord).rgb;
     gl_FragColor = vec4(colour, 1.0);
   }
 `;

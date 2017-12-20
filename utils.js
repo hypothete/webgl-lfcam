@@ -39,12 +39,15 @@ function Camera (gl, pos, tgt, fov, near, far, viewport) {
     near,
     far,
     viewport,
-    render (scene) {
+    render (scene, dontLookAt) {
+      dontLookAt = dontLookAt || false;
       gl.viewport(cam.viewport.x, cam.viewport.y, cam.viewport.w, cam.viewport.h);
       gl.enable(gl.SCISSOR_TEST);
       gl.scissor(cam.viewport.x, cam.viewport.y, cam.viewport.w, cam.viewport.h);
 
-      mat4.lookAt(modelViewMatrix, cam.pos, cam.tgt, vec3.fromValues(0, 1.0, 0));
+      if(!dontLookAt) {
+        mat4.lookAt(modelViewMatrix, cam.pos, cam.tgt, vec3.fromValues(0, 1.0, 0));
+      }
       mat4.perspective(projectionMatrix, cam.fov, cam.viewport.w/cam.viewport.h, cam.near, cam.far);
       mat3.normalFromMat4(normalMatrix, modelViewMatrix);
 
@@ -107,6 +110,7 @@ function LightFieldCamera (gl, pos, tgt, fov, near, far, side, spread, helperPro
         w: gl.canvas.width / side,
         h: gl.canvas.height / side
       };
+      let camTgt = vec3.fromValues(camPos[0], camPos[1], 1000.0);
       let newCam = new Camera(gl, camPos, tgt, fov, near, far, camView);
       cam.cameras.push(newCam);
     }
@@ -121,22 +125,29 @@ function drawMesh (gl, mesh) {
 
   gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix, false, projectionMatrix);
   gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix, false, modelViewMatrix);
-  gl.uniformMatrix3fv(programInfo.uniformLocations.normalMatrix, false, normalMatrix);
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureBuffer);
-  gl.vertexAttribPointer(programInfo.attribLocations.textureCoord, mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
-  gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
-  gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, mesh.texture);
-  gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+  if (programInfo.uniformLocations.normalMatrix) {
+    gl.uniformMatrix3fv(programInfo.uniformLocations.normalMatrix, false, normalMatrix);
+  }
+
+  if (programInfo.uniformLocations.uSampler) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureBuffer);
+    gl.vertexAttribPointer(programInfo.attribLocations.textureCoord, mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, mesh.texture);
+    gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+  }
 
   gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertexBuffer);
   gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition, mesh.vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
 
-  gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalBuffer);
-  gl.vertexAttribPointer(programInfo.attribLocations.vertexNormal, mesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
-  gl.enableVertexAttribArray(programInfo.attribLocations.vertexNormal);
+  if (programInfo.attribLocations.vertexNormal) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalBuffer);
+    gl.vertexAttribPointer(programInfo.attribLocations.vertexNormal, mesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(programInfo.attribLocations.vertexNormal);
+  }
 
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
   gl.drawElements(gl.TRIANGLES, mesh.indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
@@ -228,7 +239,7 @@ function makeFramebuffer (gl) {
   return { buffer: fbo, texture };
 }
 
-function makeDepthBuffer () {
+function makeDepthBuffer (gl) {
   const depthBuffer = gl.createRenderbuffer();
   gl.bindRenderbuffer(gl.RENDERBUFFER, depthBuffer);
   gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, gl.canvas.width, gl.canvas.height);

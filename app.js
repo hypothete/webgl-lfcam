@@ -43,6 +43,18 @@ const planeShaderLocations = {
   },
 };
 
+const planeUVShaderProgram = initShaderProgram(gl, planeUVVert, planeUVFrag);
+const planeUVShaderLocations = {
+  attribLocations: {
+    vertexPosition: gl.getAttribLocation(planeUVShaderProgram, 'aVertexPosition'),
+    textureCoord: gl.getAttribLocation(planeUVShaderProgram, 'aTextureCoord'),
+  },
+  uniformLocations: {
+    projectionMatrix: gl.getUniformLocation(planeUVShaderProgram, 'uProjectionMatrix'),
+    modelViewMatrix: gl.getUniformLocation(planeUVShaderProgram, 'uModelViewMatrix')
+  },
+};
+
 const helperShaderProgram = initShaderProgram(gl, helperVert, helperFrag);
 const helperShaderLocations = {
   attribLocations: {
@@ -62,7 +74,7 @@ const lfCam = new LightFieldCamera(gl,
   Math.PI / 2,
   1.0, 100.0,
   5,
-  0.2,
+  0.5,
   helperShaderProgram,
   helperShaderLocations
 );
@@ -79,7 +91,9 @@ const objRequest = new Request('./teapot-scaled.obj');
 const plnRequest = new Request('./plane.obj');
 
 const sceneAfb = makeFramebuffer(gl);
-const depthBuffer = makeDepthBuffer();
+const depthBuffer = makeDepthBuffer(gl);
+const sceneBUVfb = makeFramebuffer(gl);
+const otherDepthBuffer = makeDepthBuffer(gl);
 
 Promise.all([
   fetch(objRequest),
@@ -101,15 +115,8 @@ Promise.all([
 
   plane = new OBJ.Mesh(secondBundle[1]);
   OBJ.initMeshBuffers(gl, plane);
-  plane.shaderProgram = planeShaderProgram;
-  plane.shaderLocations = planeShaderLocations;
-  plane.texture = sceneAfb.texture;
 
-  const screenSize = new Float32Array([gl.canvas.width, gl.canvas.height]);
-  const mapScale = new Float32Array([lfCam.side, lfCam.side]);
-  gl.useProgram(plane.shaderProgram);
-  gl.uniform2fv(plane.shaderLocations.uniformLocations.screenSize, screenSize);
-  gl.uniform2fv(plane.shaderLocations.uniformLocations.mapScale, mapScale);
+
 
   sceneA.push(teapot);
   sceneB.push(plane);
@@ -118,6 +125,7 @@ Promise.all([
   gl.enable(gl.DEPTH_TEST);
   drawMap();
   enableControls();
+
   animate();
 
   function animate () {
@@ -136,16 +144,38 @@ function drawMap () {
 }
 
 function drawScene() {
+  plane.shaderProgram = planeUVShaderProgram;
+  plane.shaderLocations = planeUVShaderLocations;
+  //mat4.identity(modelViewMatrix);
+  //gl.useProgram(plane.shaderProgram);
+  //gl.uniformMatrix4fv(plane.shaderLocations.uniformLocations.modelViewMatrix, false, modelViewMatrix);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, sceneBUVfb.buffer);
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  gl.clearDepth(1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  vCam.render(sceneB);
+  //
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.clearColor(0.0, 0.0, 1.0, 1.0);
   gl.clearDepth(1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  plane.shaderProgram = planeShaderProgram;
+  plane.shaderLocations = planeShaderLocations;
+  plane.texture = sceneBUVfb.texture; // sceneAfb.texture;
+  const screenSize = new Float32Array([gl.canvas.width, gl.canvas.height]);
+  const mapScale = new Float32Array([lfCam.side, lfCam.side]);
+  gl.useProgram(plane.shaderProgram);
+  gl.uniform2fv(plane.shaderLocations.uniformLocations.screenSize, screenSize);
+  gl.uniform2fv(plane.shaderLocations.uniformLocations.mapScale, mapScale);
   vCam.render(sceneB);
   lfCam.drawHelper();
 }
 
 function enableControls () {
   gl.canvas.onmousemove = function(e) {
-    vCam.pos[0] = (-2 * (e.offsetX / window.innerWidth) + 1) * 2;
-    vCam.pos[1] = (2 * (e.offsetY / window.innerHeight) - 1) * 2;
+    vCam.pos[0] = (-2 * (e.offsetX / gl.canvas.offsetWidth) + 1) * 2;
+    vCam.pos[1] = (2 * (e.offsetY / gl.canvas.offsetHeight) - 1) * 2;
+    vec3.normalize(vCam.pos, vCam.pos);
+    vec3.scale(vCam.pos, vCam.pos, 3);
   };
 }
