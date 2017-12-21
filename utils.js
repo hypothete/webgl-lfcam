@@ -63,6 +63,7 @@ function Camera (gl, pos, tgt, fov, near, far, viewport) {
 function LightFieldCamera (gl, pos, tgt, fov, near, far, side, spread, helperProgram, helperLocations) {
   let cam = {
     pos,
+    tgt,
     side,
     spread,
     cameras: [],
@@ -130,10 +131,13 @@ function drawMesh (gl, mesh) {
     gl.uniformMatrix3fv(programInfo.uniformLocations.normalMatrix, false, normalMatrix);
   }
 
-  if (programInfo.uniformLocations.uSampler) {
+  if (programInfo.attribLocations.textureCoord) {
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureBuffer);
     gl.vertexAttribPointer(programInfo.attribLocations.textureCoord, mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+  }
+
+  if (programInfo.uniformLocations.uSampler) {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, mesh.texture);
     gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
