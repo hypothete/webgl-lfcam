@@ -28,99 +28,58 @@ const teapotVert = `
 const teapotFrag = `
   precision highp float;
 
-  uniform sampler2D uSampler;
+  uniform sampler2D uTexture0;
 
   varying vec2 vTextureCoord;
   varying vec3 vLighting;
 
   void main() {
-    vec4 texelColor = texture2D(uSampler, vTextureCoord);
+    vec4 texelColor = texture2D(uTexture0, vTextureCoord);
     gl_FragColor = vec4(texelColor.rgb * vLighting, texelColor.a);
-  }
-`;
-
-const planeUVVert = `
-  attribute vec4 aVertexPosition;
-  attribute vec2 aTextureCoord;
-
-  uniform mat4 uModelViewMatrix;
-  uniform mat4 uProjectionMatrix;
-
-  varying vec2 vTextureCoord;
-
-  void main() {
-    vTextureCoord = aTextureCoord;
-    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-  }
-`;
-
-const planeUVFrag = `
-  precision highp float;
-
-  varying vec2 vTextureCoord;
-
-  void main() {
-    gl_FragColor = vec4(vTextureCoord, 0.0, 1.0);
   }
 `;
 
 const planeVert = `
   attribute vec2 aTextureCoord;
   attribute vec4 aVertexPosition;
-  attribute vec3 aVertexNormal;
-
-  uniform mat4 uModelViewMatrix;
-  uniform mat4 uProjectionMatrix;
-  uniform mat3 uNormalMatrix;
 
   varying vec2 vTextureCoord;
 
   void main() {
     vTextureCoord = aTextureCoord;
-    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    vec3 transformedNormal = uNormalMatrix * aVertexNormal;
+    gl_Position = aVertexPosition;
   }
 `;
 
 const planeFrag = `
   precision highp float;
-
-  uniform sampler2D uSampler;
-  uniform sampler2D uLFTex;
+  uniform sampler2D uTexture0;
   uniform vec2 screenSize;
   uniform vec2 mapScale;
+  uniform vec2 camPosition; // range 0,0 -> 1,1
 
   varying vec2 vTextureCoord;
 
   void main() {
-    vec2 targetUV  = texture2D(uSampler, gl_FragCoord.xy/screenSize).rg;
 
-    if (targetUV.x<=0.0 || targetUV.y<=0.0 || targetUV.x>=1.0 || targetUV.y>=1.0) {
-        discard;
-    }
+    vec2 minCell = floor(vec2(1.0 - camPosition.x, camPosition.y) * mapScale) / mapScale;
+    vec2 maxCell = ceil(vec2(1.0 - camPosition.x, camPosition.y) * mapScale) / mapScale;
 
-    vec2 sampleUV = targetUV;
-    vec2 dirVec = (sampleUV - vTextureCoord)*(-1.0, 1.0) + (0.5,0.5);
+    clamp(minCell, vec2(0.0), vec2(1.0));
+    clamp(maxCell, vec2(0.0), vec2(1.0));
 
-    vec2 uvOffset = sampleUV/mapScale;
-    vec2 dirScale = dirVec * mapScale;
+    vec2 scaledCoord = (gl_FragCoord.xy / screenSize) / mapScale;
 
-    vec2 minDir = floor(dirScale) / mapScale;
-    vec2 maxDir = ceil(dirScale) / mapScale;
-    vec2 weight = fract(dirScale);
+    vec3 colA = texture2D(uTexture0, scaledCoord + vec2(minCell)).rgb;
+    vec3 colB = texture2D(uTexture0, scaledCoord + vec2(maxCell.x, minCell.y)).rgb;
+    vec3 colC = texture2D(uTexture0, scaledCoord + vec2(minCell.x, maxCell.y)).rgb;
+    vec3 colD = texture2D(uTexture0, scaledCoord + vec2(maxCell)).rgb;
 
-    vec3 colour1 = texture2D(uLFTex, minDir + uvOffset).rgb;
-    vec3 colour2 = texture2D(uLFTex, vec2(minDir.x, maxDir.y) + uvOffset).rgb;
-    vec3 colour3 = texture2D(uLFTex, vec2(maxDir.x, minDir.y) + uvOffset).rgb;
-    vec3 colour4 = texture2D(uLFTex, maxDir + uvOffset).rgb;
+    vec2 blend = vec2(1.0 - camPosition.x, camPosition.y) - minCell;
 
-    vec3 colour = mix(
-      mix(colour1, colour3, weight.x),
-      mix(colour2, colour4, weight.x),
-      weight.y
-    );
-    colour = vec3(vTextureCoord, 0.0);
-    gl_FragColor = vec4(colour, 1.0);
+    vec3 interp = mix(mix(colA, colC, blend.x), mix(colB, colD, blend.x), blend.y);
+
+    gl_FragColor = vec4(interp, 1.0);
   }
 `;
 

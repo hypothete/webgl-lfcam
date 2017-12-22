@@ -1,3 +1,14 @@
+function renderNoCam (gl, scene) {
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  gl.enable(gl.SCISSOR_TEST);
+  gl.scissor(0, 0, gl.canvas.width, gl.canvas.height);
+
+  for (let mesh of scene) {
+    drawMesh(gl, mesh);
+  }
+  gl.disable(gl.SCISSOR_TEST);
+}
+
 function initShaderProgram(gl, vsSource, fsSource) {
   const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
   const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
@@ -127,27 +138,27 @@ function drawMesh (gl, mesh) {
   gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix, false, projectionMatrix);
   gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix, false, modelViewMatrix);
 
-  if (programInfo.uniformLocations.normalMatrix) {
+  if (typeof programInfo.uniformLocations.normalMatrix !== 'undefined') {
     gl.uniformMatrix3fv(programInfo.uniformLocations.normalMatrix, false, normalMatrix);
   }
 
-  if (programInfo.attribLocations.textureCoord) {
+  if (typeof programInfo.attribLocations.textureCoord !== 'undefined') {
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureBuffer);
     gl.vertexAttribPointer(programInfo.attribLocations.textureCoord, mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
   }
 
-  if (programInfo.uniformLocations.uSampler) {
+  if (typeof mesh.texture0 !== 'undefined') {
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, mesh.texture);
-    gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+    gl.bindTexture(gl.TEXTURE_2D, mesh.texture0);
+    gl.uniform1i(programInfo.uniformLocations.texture0, 0);
   }
 
   gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertexBuffer);
   gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition, mesh.vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
 
-  if (programInfo.attribLocations.vertexNormal) {
+  if (typeof programInfo.attribLocations.vertexNormal !== 'undefined') {
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalBuffer);
     gl.vertexAttribPointer(programInfo.attribLocations.vertexNormal, mesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(programInfo.attribLocations.vertexNormal);
