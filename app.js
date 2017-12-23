@@ -40,39 +40,36 @@ const teapotShaderLocations = {
 //   },
 // };
 //
-// const helperShaderProgram = initShaderProgram(gl, helperVert, helperFrag);
-// const helperShaderLocations = {
-//   attribLocations: {
-//     vertexPosition: gl.getAttribLocation(helperShaderProgram, 'aVertexPosition')
-//   },
-//   uniformLocations: {
-//     projectionMatrix: gl.getUniformLocation(helperShaderProgram, 'uProjectionMatrix'),
-//     modelViewMatrix: gl.getUniformLocation(helperShaderProgram, 'uModelViewMatrix')
-//   },
-// };
+const helperShaderProgram = initShaderProgram(gl, helperVert, helperFrag);
+const helperShaderLocations = {
+  attribLocations: {
+    vertexPosition: gl.getAttribLocation(helperShaderProgram, 'aVertexPosition')
+  },
+  uniformLocations: {
+    projectionMatrix: gl.getUniformLocation(helperShaderProgram, 'uProjectionMatrix'),
+    modelViewMatrix: gl.getUniformLocation(helperShaderProgram, 'uModelViewMatrix')
+  },
+};
 
 var noiseTexture;
 
-// const lfCam = new LightFieldCamera(gl,
-//   vec3.fromValues(0, 0, 2),
-//   vec3.create(),
-//   Math.PI / 2,
-//   1.0, 100.0,
-//   9,
-//   0.1,
-//   helperShaderProgram,
-//   helperShaderLocations
-// );
+const lfCam = new LightFieldCamera(gl,
+  Math.PI / 4,
+  1.0, 100.0,
+  5,
+  0.1,
+  helperShaderProgram,
+  helperShaderLocations,
+  sceneC
+);
 
 const vCamZ = 4;
 const vCam = new Camera(gl,
   Math.PI / 4,
   1.0, 100.0,
-  { x: 0, y: 0, w: gl.canvas.width, h: gl.canvas.height }
+  { x: 0, y: 0, w: gl.canvas.width, h: gl.canvas.height },
+  sceneC
 );
-
-// vec3.set(vCam.translation, 0, 0, 2);
-// vCam.updateMatrix();
 
 const objRequest = new Request('./teapot-scaled.obj');
 const plnRequest = new Request('./plane.obj');
@@ -103,13 +100,15 @@ Promise.all([
   teapot = new Model(gl, 'teapot', teapotMesh, sceneC, teapotShaderProgram, teapotShaderLocations);
   teapot.textures.push(secondBundle[2]);
   sceneC.children.push(teapot);
-  vec3.set(teapot.translation, 0, 0, -8);
+  vec3.set(teapot.translation, 0, 0, -4);
+  vec3.set(teapot.rotation, 0, 0, 22.5);
 
   otherTeapot = new Model(gl, 'other teapot', teapotMesh, teapot, teapotShaderProgram, teapotShaderLocations);
   otherTeapot.textures.push(secondBundle[2]);
   teapot.children.push(otherTeapot);
 
   vec3.set(otherTeapot.translation, 1, 0.5, 0);
+  vec3.set(otherTeapot.scale, 0.5, 0.5, 0.5);
 
   // plane = new OBJ.Mesh(secondBundle[1]);
   // OBJ.initMeshBuffers(gl, plane);
@@ -155,8 +154,9 @@ function drawScene() {
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
   gl.clearDepth(1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  vCam.render(sceneC);
+  //vCam.render(sceneC);
   //vCam.render(sceneB);
+  lfCam.render(sceneC);
   //lfCam.drawHelper();
 }
 
@@ -165,13 +165,7 @@ function enableControls () {
     let nDx = -2 * (e.offsetX / gl.canvas.offsetWidth) + 1;
     let nDy = 2 * (e.offsetY / gl.canvas.offsetHeight) - 1;
 
-    // vec3.set(teapot.translation, nDx, 0, nDy - 5);
-    // teapot.updateMatrix();
-
-    // quat.set(vCam.rotation, -nDy, nDx, 0, 1.0);
-    // vCam.updateMatrix();
-    vec3.set(teapot.scale, nDy, nDy, nDy);
-    vec3.set(otherTeapot.translation, 1, nDy, 0);
-    //vec3.set(teapot.scale, 1.0, 1.0, nDy);
+    vec3.set(teapot.rotation, 0, nDx * 180, 22.5);
+    vec3.set(otherTeapot.rotation, 0, nDx * 180, 0);
   };
 }

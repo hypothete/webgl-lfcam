@@ -58,18 +58,12 @@ function Model (gl, name, mesh, parent, shaderProgram, shaderLocations) {
       const transMat = mat4.fromTranslation(mat4.create(), model.translation);
       const scaleMat = mat4.fromScaling(mat4.create(), model.scale);
       mat4.copy(model.matrix, mat4.create());
-      mat4.multiply(model.matrix, model.matrix, parent.matrix);
+      mat4.multiply(model.matrix, model.matrix, model.parent.matrix);
 
       mat4.multiply(model.matrix, model.matrix, transMat);
       mat4.multiply(model.matrix, model.matrix, rotMat);
       mat4.multiply(model.matrix, model.matrix, scaleMat);
-      //
-      // mat4.fromRotationTranslationScale(
-      //   model.matrix,
-      //   rotQuat,
-      //   model.translation,
-      //   model.scale
-      // );
+
       // now multiply in the parent matrix
 
     },
@@ -129,45 +123,45 @@ function Model (gl, name, mesh, parent, shaderProgram, shaderLocations) {
   return model;
 }
 
-function Camera (gl, fov, near, far, viewport) {
+function Camera (gl, fov, near, far, viewport, parent) {
   const cam = {
     fov,
     near,
     far,
     viewport,
+    parent: parent || { matrix: mat4.create() },
     matrix: mat4.create(),
     translation: vec3.create(),
     rotation: vec3.create(),
     updateMatrix () {
       const rotQuat = quat.fromEuler(quat.create(), cam.rotation[0], cam.rotation[1], cam.rotation[2]);
-      cam.matrix = mat4.fromRotationTranslation(
-        cam.matrix,
-        rotQuat,
-        cam.translation
-      );
+      const rotMat = mat4.fromQuat(mat4.create(), rotQuat);
+      const transMat = mat4.fromTranslation(mat4.create(), cam.translation);
+      mat4.copy(cam.matrix, mat4.create());
+      mat4.multiply(cam.matrix, cam.matrix, cam.parent.matrix);
+      mat4.multiply(cam.matrix, cam.matrix, transMat);
+      mat4.multiply(cam.matrix, cam.matrix, rotMat);
     },
     render (scene) {
+      cam.updateMatrix();
       gl.viewport(cam.viewport.x, cam.viewport.y, cam.viewport.w, cam.viewport.h);
       gl.enable(gl.SCISSOR_TEST);
       gl.scissor(cam.viewport.x, cam.viewport.y, cam.viewport.w, cam.viewport.h);
-
       mat4.invert(viewMatrix, cam.matrix);
       mat4.perspective(projectionMatrix, cam.fov, cam.viewport.w/cam.viewport.h, cam.near, cam.far);
-
       for (let child of scene.children) {
         child.draw();
       }
-
       gl.disable(gl.SCISSOR_TEST);
     }
   };
   return cam;
 }
 
-function LightFieldCamera (gl, pos, tgt, fov, near, far, side, spread, helperProgram, helperLocations) {
+function LightFieldCamera (gl, fov, near, far, side, spread, helperProgram, helperLocations, parent) {
   let cam = {
-    pos,
-    tgt,
+    translation: vec3.create(),
+    rotation: vec3.create(),
     side,
     spread,
     cameras: [],
@@ -175,6 +169,16 @@ function LightFieldCamera (gl, pos, tgt, fov, near, far, side, spread, helperPro
     camPosBuffer: gl.createBuffer(),
     shaderProgram: helperProgram,
     shaderLocations: helperLocations,
+    parent: parent || { matrix: mat4.create() },
+    updateMatrix () {
+      const rotQuat = quat.fromEuler(quat.create(), cam.rotation[0], cam.rotation[1], cam.rotation[2]);
+      const rotMat = mat4.fromQuat(mat4.create(), rotQuat);
+      const transMat = mat4.fromTranslation(mat4.create(), cam.translation);
+      mat4.copy(cam.matrix, mat4.create());
+      mat4.multiply(cam.matrix, cam.matrix, cam.parent.matrix);
+      mat4.multiply(cam.matrix, cam.matrix, transMat);
+      mat4.multiply(cam.matrix, cam.matrix, rotMat);
+    },
     render: function (scene) {
       for (let camera of cam.cameras) {
         camera.render(scene);
@@ -183,14 +187,16 @@ function LightFieldCamera (gl, pos, tgt, fov, near, far, side, spread, helperPro
     updateCamPosArray: function () {
       cam.camPosArray = [];
       for (let camera of cam.cameras) {
-        cam.camPosArray.push(camera.pos[0]);
-        cam.camPosArray.push(camera.pos[1]);
-        cam.camPosArray.push(camera.pos[2]);
+        cam.camPosArray.push(camera.translation[0]);
+        cam.camPosArray.push(camera.translation[1]);
+        cam.camPosArray.push(camera.translation[2]);
       }
       gl.bindBuffer(gl.ARRAY_BUFFER, cam.camPosBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cam.camPosArray), gl.STATIC_DRAW);
     },
     drawHelper: function () {
+      cam.updateMatrix();
+
       gl.useProgram(cam.shaderProgram);
 
       gl.uniformMatrix4fv(cam.shaderLocations.uniformLocations.projectionMatrix, false, projectionMatrix);
@@ -207,16 +213,14 @@ function LightFieldCamera (gl, pos, tgt, fov, near, far, side, spread, helperPro
   let halfSide = Math.floor(side / 2);
   for (let i=0; i<side; i++) {
     for (let j=0; j<side; j++) {
-      let camPos = vec3.create();
-      vec3.add(camPos, pos, vec3.fromValues((i - halfSide) * spread, (j - halfSide) * spread, 0));
       let camView = {
         x: i * gl.canvas.width / side,
         y: j * gl.canvas.height / side,
         w: gl.canvas.width / side,
         h: gl.canvas.height / side
       };
-      let camTgt = vec3.fromValues(camPos[0], camPos[1], -1000.0);
-      let newCam = new Camera(gl, camPos, camTgt, fov, near, far, camView);
+      let newCam = new Camera(gl, fov, near, far, camView);
+      vec3.set(newCam.translation, vec3.fromValues((i - halfSide) * spread, (j - halfSide) * spread, 0));
       cam.cameras.push(newCam);
     }
   }
