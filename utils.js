@@ -122,8 +122,8 @@ function LightFieldCamera (gl, pos, tgt, fov, near, far, side, spread, helperPro
         w: gl.canvas.width / side,
         h: gl.canvas.height / side
       };
-      let camTgt = vec3.fromValues(camPos[0], camPos[1], 1000.0);
-      let newCam = new Camera(gl, camPos, tgt, fov, near, far, camView);
+      let camTgt = vec3.fromValues(camPos[0], camPos[1], -1000.0);
+      let newCam = new Camera(gl, camPos, camTgt, fov, near, far, camView);
       cam.cameras.push(newCam);
     }
   }

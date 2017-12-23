@@ -33,10 +33,12 @@ const planeShaderLocations = {
     textureCoord: gl.getAttribLocation(planeShaderProgram, 'aTextureCoord')
   },
   uniformLocations: {
+    projectionMatrix: gl.getUniformLocation(planeShaderProgram, 'uProjectionMatrix'),
+    modelViewMatrix: gl.getUniformLocation(planeShaderProgram, 'uModelViewMatrix'),
     texture0: gl.getUniformLocation(planeShaderProgram, 'uTexture0'),
     screenSize: gl.getUniformLocation(planeShaderProgram, 'screenSize'),
     mapScale: gl.getUniformLocation(planeShaderProgram, 'mapScale'),
-    camPosition: gl.getUniformLocation(planeShaderProgram, 'camPosition')
+    camPosition: gl.getUniformLocation(planeShaderProgram, 'camPosition'),
   },
 };
 
@@ -56,15 +58,22 @@ var noiseTexture;
 const lfCam = new LightFieldCamera(gl,
   vec3.fromValues(0, 0, 2),
   vec3.create(),
-  Math.PI / 4,
+  Math.PI / 2,
   1.0, 100.0,
-  5,
-  0.2,
+  9,
+  0.1,
   helperShaderProgram,
   helperShaderLocations
 );
 
-const camPosition = vec2.create();
+const vCamZ = 4;
+const vCam = new Camera(gl,
+  vec3.fromValues(0, 0, vCamZ),
+  vec3.fromValues(0,0,0),
+  Math.PI / 4,
+  1.0, 100.0,
+  { x: 0, y: 0, w: gl.canvas.width, h: gl.canvas.height }
+);
 
 const objRequest = new Request('./teapot-scaled.obj');
 const plnRequest = new Request('./plane.obj');
@@ -100,6 +109,7 @@ Promise.all([
   gl.useProgram(planeShaderProgram);
   gl.uniform2fv(planeShaderLocations.uniformLocations.screenSize, screenSize);
   gl.uniform2fv(planeShaderLocations.uniformLocations.mapScale, mapScale);
+  gl.uniform3fv(planeShaderLocations.uniformLocations.camPosition, vCam.pos);
 
   sceneA.push(teapot);
   sceneB.push(plane);
@@ -129,22 +139,20 @@ function drawMap () {
 }
 
 function drawScene() {
-  gl.clearColor(0.0, 0.0, 1.0, 1.0);
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
   gl.clearDepth(1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  renderNoCam(gl, sceneB);
-  //vCam.render(sceneB);
-  //lfCam.drawHelper();
+  vCam.render(sceneB);
+  lfCam.drawHelper();
 }
 
 function enableControls () {
   gl.canvas.onmousemove = function(e) {
-    vec2.set(camPosition,
-      e.offsetX / gl.canvas.offsetWidth,
-      e.offsetY / gl.canvas.offsetHeight
-    );
+    vCam.pos[0] = (-2 * (e.offsetX / gl.canvas.offsetWidth) + 1) * vCamZ;
+    vCam.pos[1] = (2 * (e.offsetY / gl.canvas.offsetHeight) - 1) * vCamZ;
+    vec3.normalize(vCam.pos, vCam.pos);
+    vec3.scale(vCam.pos, vCam.pos, vCamZ);
     gl.useProgram(planeShaderProgram);
-    gl.uniform2fv(planeShaderLocations.uniformLocations.camPosition, camPosition);
-    //console.log(camPosition);
+    gl.uniform3fv(planeShaderLocations.uniformLocations.camPosition, vCam.pos);
   };
 }
