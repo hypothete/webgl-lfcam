@@ -1,14 +1,3 @@
-function renderNoCam (gl, scene) {
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-  gl.enable(gl.SCISSOR_TEST);
-  gl.scissor(0, 0, gl.canvas.width, gl.canvas.height);
-
-  for (let mesh of scene) {
-    drawMesh(gl, mesh);
-  }
-  gl.disable(gl.SCISSOR_TEST);
-}
-
 function initShaderProgram(gl, vsSource, fsSource) {
   const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
   const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
@@ -42,29 +31,133 @@ function loadShader(gl, type, source) {
   return shader;
 }
 
-function Camera (gl, pos, tgt, fov, near, far, viewport) {
+function Scene () {
+  const scene = {
+    matrix: mat4.identity(mat4.create()),
+    children: []
+  };
+  return scene;
+}
+
+function Model (gl, name, mesh, parent, shaderProgram, shaderLocations) {
+  const model = {
+    name,
+    mesh,
+    shaderProgram,
+    shaderLocations,
+    textures: [],
+    parent,
+    children: [],
+    matrix: mat4.create(),
+    translation: vec3.create(),
+    rotation: vec3.create(),
+    scale: vec3.fromValues(1,1,1),
+    updateMatrix: function () {
+      const rotQuat = quat.fromEuler(quat.create(), model.rotation[0], model.rotation[1], model.rotation[2]);
+      const rotMat = mat4.fromQuat(mat4.create(), rotQuat);
+      const transMat = mat4.fromTranslation(mat4.create(), model.translation);
+      const scaleMat = mat4.fromScaling(mat4.create(), model.scale);
+      mat4.copy(model.matrix, mat4.create());
+      mat4.multiply(model.matrix, model.matrix, parent.matrix);
+
+      mat4.multiply(model.matrix, model.matrix, transMat);
+      mat4.multiply(model.matrix, model.matrix, rotMat);
+      mat4.multiply(model.matrix, model.matrix, scaleMat);
+      //
+      // mat4.fromRotationTranslationScale(
+      //   model.matrix,
+      //   rotQuat,
+      //   model.translation,
+      //   model.scale
+      // );
+      // now multiply in the parent matrix
+
+    },
+    draw: function () {
+      model.updateMatrix();
+
+      mat4.multiply(modelViewMatrix, model.matrix, viewMatrix);
+      mat3.normalFromMat4(normalMatrix, modelViewMatrix);
+
+      gl.useProgram(model.shaderProgram);
+
+      gl.uniformMatrix4fv(model.shaderLocations.uniformLocations.projectionMatrix, false, projectionMatrix);
+      gl.uniformMatrix4fv(model.shaderLocations.uniformLocations.modelViewMatrix, false, modelViewMatrix);
+
+      if (typeof model.shaderLocations.uniformLocations.normalMatrix !== 'undefined') {
+        gl.uniformMatrix3fv(model.shaderLocations.uniformLocations.normalMatrix, false, normalMatrix);
+      }
+
+      if (typeof model.shaderLocations.attribLocations.textureCoord !== 'undefined') {
+        gl.bindBuffer(gl.ARRAY_BUFFER, model.mesh.textureBuffer);
+        gl.vertexAttribPointer(model.shaderLocations.attribLocations.textureCoord, model.mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(model.shaderLocations.attribLocations.textureCoord);
+      }
+
+      if (typeof mesh.texture0 !== 'undefined') {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, mesh.texture0);
+        gl.uniform1i(model.shaderLocations.uniformLocations.texture0, 0);
+      }
+
+      for (let texInd = 0; texInd < model.textures.length; texInd++) {
+        let glSlot = 'TEXTURE' + texInd;
+        let uniformLoc = glSlot.toLowerCase();
+        gl.activeTexture(gl[glSlot]);
+        gl.bindTexture(gl.TEXTURE_2D, model.textures[texInd]);
+        gl.uniform1i(model.shaderLocations.uniformLocations[uniformLoc], texInd);
+      }
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, model.mesh.vertexBuffer);
+      gl.vertexAttribPointer(model.shaderLocations.attribLocations.vertexPosition, model.mesh.vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(model.shaderLocations.attribLocations.vertexPosition);
+
+      if (typeof model.shaderLocations.attribLocations.vertexNormal !== 'undefined') {
+        gl.bindBuffer(gl.ARRAY_BUFFER, model.mesh.normalBuffer);
+        gl.vertexAttribPointer(model.shaderLocations.attribLocations.vertexNormal, model.mesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(model.shaderLocations.attribLocations.vertexNormal);
+      }
+
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.mesh.indexBuffer);
+      gl.drawElements(gl.TRIANGLES, model.mesh.indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+
+      for (let child of model.children) {
+        child.draw();
+      }
+    }
+  };
+  return model;
+}
+
+function Camera (gl, fov, near, far, viewport) {
   const cam = {
     fov,
-    pos,
-    tgt,
     near,
     far,
     viewport,
-    render (scene, dontLookAt) {
-      dontLookAt = dontLookAt || false;
+    matrix: mat4.create(),
+    translation: vec3.create(),
+    rotation: vec3.create(),
+    updateMatrix () {
+      const rotQuat = quat.fromEuler(quat.create(), cam.rotation[0], cam.rotation[1], cam.rotation[2]);
+      cam.matrix = mat4.fromRotationTranslation(
+        cam.matrix,
+        rotQuat,
+        cam.translation
+      );
+    },
+    render (scene) {
       gl.viewport(cam.viewport.x, cam.viewport.y, cam.viewport.w, cam.viewport.h);
       gl.enable(gl.SCISSOR_TEST);
       gl.scissor(cam.viewport.x, cam.viewport.y, cam.viewport.w, cam.viewport.h);
 
-      if(!dontLookAt) {
-        mat4.lookAt(modelViewMatrix, cam.pos, cam.tgt, vec3.fromValues(0, 1.0, 0));
-      }
+      mat4.invert(viewMatrix, cam.matrix);
       mat4.perspective(projectionMatrix, cam.fov, cam.viewport.w/cam.viewport.h, cam.near, cam.far);
-      mat3.normalFromMat4(normalMatrix, modelViewMatrix);
 
-      for (let mesh of scene) {
-        drawMesh(gl, mesh);
+      for (let child of scene.children) {
+        child.draw();
       }
+
       gl.disable(gl.SCISSOR_TEST);
     }
   };
@@ -131,69 +224,15 @@ function LightFieldCamera (gl, pos, tgt, fov, near, far, side, spread, helperPro
   return cam;
 }
 
-function drawMesh (gl, mesh) {
-  const programInfo = mesh.shaderLocations;
-  gl.useProgram(mesh.shaderProgram);
+function renderNoCam (gl, scene) {
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  gl.enable(gl.SCISSOR_TEST);
+  gl.scissor(0, 0, gl.canvas.width, gl.canvas.height);
 
-  gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix, false, projectionMatrix);
-  gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix, false, modelViewMatrix);
-
-  if (typeof programInfo.uniformLocations.normalMatrix !== 'undefined') {
-    gl.uniformMatrix3fv(programInfo.uniformLocations.normalMatrix, false, normalMatrix);
+  for (let mesh of scene) {
+    drawMesh(gl, mesh);
   }
-
-  if (typeof programInfo.attribLocations.textureCoord !== 'undefined') {
-    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.textureBuffer);
-    gl.vertexAttribPointer(programInfo.attribLocations.textureCoord, mesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
-  }
-
-  if (typeof mesh.texture0 !== 'undefined') {
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, mesh.texture0);
-    gl.uniform1i(programInfo.uniformLocations.texture0, 0);
-  }
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertexBuffer);
-  gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition, mesh.vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
-  gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
-
-  if (typeof programInfo.attribLocations.vertexNormal !== 'undefined') {
-    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalBuffer);
-    gl.vertexAttribPointer(programInfo.attribLocations.vertexNormal, mesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(programInfo.attribLocations.vertexNormal);
-  }
-
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
-  gl.drawElements(gl.TRIANGLES, mesh.indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-}
-
-function loadTexture (gl, url) {
-  const texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA,
-                1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-                new Uint8Array([0, 0, 255, 255]));
-
-  const image = new Image();
-  image.onload = function() {
-    texture.image = image;
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA,
-                  gl.RGBA, gl.UNSIGNED_BYTE, image);
-
-    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-       gl.generateMipmap(gl.TEXTURE_2D);
-    }
-    else {
-       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    }
-  };
-  image.src = url;
-
-  return texture;
+  gl.disable(gl.SCISSOR_TEST);
 }
 
 function promiseTexture (gl, url) {
