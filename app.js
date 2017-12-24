@@ -81,7 +81,9 @@ const objRequest = new Request('./teapot-scaled.obj');
 const plnRequest = new Request('./plane.obj');
 
 const sceneAfb = makeFramebuffer(gl);
-const depthBuffer = makeDepthBuffer(gl);
+const depthBufferA = makeDepthBuffer(gl);
+const sceneBfb = makeFramebuffer(gl);
+const depthBufferB = makeDepthBuffer(gl);
 
 Promise.all([
   fetch(objRequest),
@@ -130,14 +132,11 @@ Promise.all([
 
   gl.enable(gl.CULL_FACE);
   gl.enable(gl.DEPTH_TEST);
-
+  gl.disable(gl.BLEND);
   drawMap();
   enableControls();
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  gl.enable(gl.BLEND);
-  gl.disable(gl.DEPTH_TEST);
-  gl.blendEquation( gl.FUNC_ADD );
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+
   animate();
 
   function animate () {
@@ -160,7 +159,20 @@ function drawScene() {
   gl.clearColor(0.0, 0.0, 0.0, 0.0);
   gl.clearDepth(1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  // light field view
+  gl.disable(gl.BLEND);
+  gl.enable(gl.DEPTH_TEST);
+  lfCam.render(sceneA);
+
+  // stuv planes view
+  gl.enable(gl.BLEND);
+  gl.disable(gl.DEPTH_TEST);
+  gl.blendEquation( gl.FUNC_ADD );
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
   vCam.render(sceneB);
+
+
 }
 
 function enableControls () {
@@ -168,11 +180,14 @@ function enableControls () {
     let nDx = -2 * (e.offsetX / gl.canvas.offsetWidth) + 1;
     let nDy = 2 * (e.offsetY / gl.canvas.offsetHeight) - 1;
 
-    //vec3.set(planes.translation, -nDx * 4, 0, 0);
+    vec3.set(planes.rotation, 0, -nDx * 180, 0);
 
-    vec3.set(planes.rotation, 0, -nDy * 180, 0);
-
-    // vec3.set(teapot.rotation, 0, nDx * 180, 22.5);
-    // vec3.set(otherTeapot.rotation, nDx * 720, 0, 0);
+    vec3.set(teapot.rotation, 0, nDx * 180, 22.5);
+    vec3.set(otherTeapot.rotation, nDx * 720, 0, 0);
   };
+
+  gl.canvas.addEventListener('wheel', function (e) {
+    let scroll = Math.abs(e.deltaY)/e.deltaY;
+    vec3.add(planes.translation, planes.translation, vec3.fromValues(0, 0, scroll));
+  });
 }

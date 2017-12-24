@@ -95,12 +95,6 @@ function Model (gl, name, mesh, parent, shaderProgram, shaderLocations) {
         gl.enableVertexAttribArray(model.shaderLocations.attribLocations.textureCoord);
       }
 
-      if (typeof mesh.texture0 !== 'undefined') {
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, mesh.texture0);
-        gl.uniform1i(model.shaderLocations.uniformLocations.texture0, 0);
-      }
-
       for (let texInd = 0; texInd < model.textures.length; texInd++) {
         let glSlot = 'TEXTURE' + texInd;
         let uniformLoc = glSlot.toLowerCase();
