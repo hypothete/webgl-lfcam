@@ -39,6 +39,42 @@ const teapotFrag = `
   }
 `;
 
+// const planeVert = `
+//   attribute vec2 aTextureCoord;
+//   attribute vec4 aVertexPosition;
+//
+//   uniform mat4 uModelViewMatrix;
+//   uniform mat4 uProjectionMatrix;
+//
+//   varying vec2 vTextureCoord;
+//   varying vec3 vGLPosition;
+//
+//   void main() {
+//     vTextureCoord = aTextureCoord;
+//     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+//     vGLPosition = aVertexPosition.xyz;
+//   }
+// `;
+//
+// const planeFrag = `
+//   precision highp float;
+//   uniform sampler2D uTexture0;
+//   uniform vec2 screenSize;
+//   uniform vec2 mapScale;
+//   uniform vec3 camPosition;
+//
+//   varying vec2 vTextureCoord;
+//   varying vec3 vGLPosition;
+//
+//   void main() {
+//     vec2 stPos = vTextureCoord;
+//
+//     vec3 imgTex = texture2D(uTexture0, vTextureCoord).rgb;
+//
+//     gl_FragColor = vec4(0.0, 0.0, vTextureCoord.x, vTextureCoord.y);
+//   }
+// `;
+
 const planeVert = `
   attribute vec2 aTextureCoord;
   attribute vec4 aVertexPosition;
@@ -47,31 +83,30 @@ const planeVert = `
   uniform mat4 uProjectionMatrix;
 
   varying vec2 vTextureCoord;
-  varying vec3 vGLPosition;
 
   void main() {
     vTextureCoord = aTextureCoord;
     gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    vGLPosition = aVertexPosition.xyz;
   }
 `;
 
-const planeFrag = `
+const uvplaneFrag = `
   precision highp float;
-  uniform sampler2D uTexture0;
-  uniform vec2 screenSize;
-  uniform vec2 mapScale;
-  uniform vec3 camPosition;
 
   varying vec2 vTextureCoord;
-  varying vec3 vGLPosition;
 
   void main() {
-    vec2 stPos = vTextureCoord;
+    gl_FragColor = vec4(vTextureCoord, 0.0, 1.0);
+  }
+`;
 
-    vec3 imgTex = texture2D(uTexture0, vTextureCoord).rgb;
+const stplaneFrag = `
+  precision highp float;
 
-    gl_FragColor = vec4(0.0, 0.0, vTextureCoord.x, vTextureCoord.y);
+  varying vec2 vTextureCoord;
+
+  void main() {
+    gl_FragColor = vec4(0.0, 0.0, vTextureCoord);
   }
 `;
 

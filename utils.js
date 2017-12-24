@@ -70,9 +70,16 @@ function Model (gl, name, mesh, parent, shaderProgram, shaderLocations) {
     draw: function () {
       model.updateMatrix();
 
+      for (let child of model.children) {
+        child.draw();
+      }
+
+      if (typeof model.mesh === 'undefined' || model.mesh == null) {
+        return;
+      }
+
       mat4.multiply(modelViewMatrix, model.matrix, viewMatrix);
       mat3.normalFromMat4(normalMatrix, modelViewMatrix);
-
       gl.useProgram(model.shaderProgram);
 
       gl.uniformMatrix4fv(model.shaderLocations.uniformLocations.projectionMatrix, false, projectionMatrix);
@@ -115,11 +122,11 @@ function Model (gl, name, mesh, parent, shaderProgram, shaderLocations) {
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.mesh.indexBuffer);
       gl.drawElements(gl.TRIANGLES, model.mesh.indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 
-      for (let child of model.children) {
-        child.draw();
-      }
     }
   };
+  if (parent && parent.children) {
+    parent.children.push(model);
+  }
   return model;
 }
 
