@@ -66,7 +66,8 @@ const holoPlaneShaderLocations = {
     modelViewMatrix: gl.getUniformLocation(holoPlaneShaderProgram, 'uModelViewMatrix'),
     screenSize: gl.getUniformLocation(holoPlaneShaderProgram, 'uScreenSize'),
     mapScale: gl.getUniformLocation(holoPlaneShaderProgram, 'uMapScale'),
-    texture0: gl.getUniformLocation(holoPlaneShaderProgram, 'uTexture0')
+    texture0: gl.getUniformLocation(holoPlaneShaderProgram, 'uTexture0'),
+    texture1: gl.getUniformLocation(holoPlaneShaderProgram, 'uTexture1')
   },
 };
 
@@ -84,10 +85,11 @@ const helperShaderLocations = {
 var noiseTexture;
 
 const lfCam = new LightFieldCamera(gl,
+  'light field cam',
   Math.PI / 4,
   1.0, 100.0,
   5,
-  0.1,
+  0.5,
   helperShaderProgram,
   helperShaderLocations,
   sceneA
@@ -95,6 +97,7 @@ const lfCam = new LightFieldCamera(gl,
 
 // camera for scenes B and C
 const vCam = new Camera(gl,
+  'view cam',
   Math.PI / 4,
   1.0, 100.0,
   { x: 0, y: 0, w: gl.canvas.width, h: gl.canvas.height },
@@ -124,7 +127,7 @@ Promise.all([
   teapot.textures.push(secondBundle[2]);
   sceneA.children.push(teapot);
   vec3.set(teapot.translation, 0, 0, -4);
-  vec3.set(teapot.rotation, 0, 0, 22.5);
+  //vec3.set(teapot.rotation, 0, 0, 22.5);
   otherTeapot = new Model(gl, 'other teapot', teapotMesh, teapot, teapotShaderProgram, teapotShaderLocations);
   otherTeapot.textures.push(secondBundle[2]);
   teapot.children.push(otherTeapot);
@@ -140,6 +143,7 @@ Promise.all([
   vec3.set(uvPlane.translation, 0, 0, 1);
   vec3.set(stPlane.translation, 0, 0, -1);
   vec3.set(planes.translation, 0, 0, -8);
+  vec3.set(uvPlane.scale, lfCam.spread * lfCam.side / 2, lfCam.spread * lfCam.side / 2, 1);
 
   // Final scene
   holo = new Model(gl, 'Planes', null, sceneC);
@@ -149,6 +153,7 @@ Promise.all([
   gl.useProgram(holoPlaneShaderProgram);
   gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.screenSize, screenSize);
   gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.mapScale, mapScale);
+  holoPlane.textures.push(sceneAfb.texture);
   holoPlane.textures.push(sceneBfb.texture);
   vec3.set(holoPlane.translation, 0, 0, 1);
   vec3.set(holo.translation, 0, 0, -8);
@@ -158,8 +163,7 @@ Promise.all([
   gl.disable(gl.BLEND);
   drawMap();
   enableControls();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
+  //gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   animate();
 
   function animate () {
@@ -184,29 +188,31 @@ function drawScene() {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   // light field view
-  // gl.disable(gl.BLEND);
-  // gl.enable(gl.DEPTH_TEST);
-  // lfCam.render(sceneA);
-
-  // stuv planes view
-  gl.bindFramebuffer(gl.FRAMEBUFFER, sceneBfb.buffer);
-  gl.clearColor(0.0, 0.0, 0.0, 0.0);
-  gl.clearDepth(1.0);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.enable(gl.BLEND);
-  gl.disable(gl.DEPTH_TEST);
-  gl.blendEquation( gl.FUNC_ADD );
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-  vCam.render(sceneB);
-
-  // holo view
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  gl.clearColor(0.0, 0.0, 0.0, 0.0);
-  gl.clearDepth(1.0);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.disable(gl.BLEND);
   gl.enable(gl.DEPTH_TEST);
-  vCam.render(sceneC);
+  lfCam.render(sceneA);
+
+  // stuv planes view
+  //gl.bindFramebuffer(gl.FRAMEBUFFER, sceneBfb.buffer);
+  // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  // gl.clearColor(0.0, 0.0, 0.0, 0.0);
+  // gl.clearDepth(1.0);
+  // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  // gl.enable(gl.BLEND);
+  // gl.disable(gl.DEPTH_TEST);
+  // //lfCam.drawHelper();
+  // gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.SRC_ALPHA);
+  // vCam.render(sceneB);
+
+
+  // holo view
+  // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  // gl.clearColor(0.0, 0.0, 0.0, 0.0);
+  // gl.clearDepth(1.0);
+  // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  // gl.disable(gl.BLEND);
+  // gl.enable(gl.DEPTH_TEST);
+  // vCam.render(sceneC);
 }
 
 function enableControls () {
@@ -217,8 +223,10 @@ function enableControls () {
     vec3.set(planes.rotation, 0, -nDx * 180, 0);
     vec3.set(holo.rotation, 0, -nDx * 180, 0);
 
-    vec3.set(teapot.rotation, 0, nDx * 180, 22.5);
-    vec3.set(otherTeapot.rotation, nDx * 720, 0, 0);
+    vec3.set(lfCam.rotation, 0, nDx * 180, 0);
+
+    // vec3.set(teapot.rotation, 0, nDx * 180, 22.5);
+    // vec3.set(otherTeapot.rotation, nDx * 720, 0, 0);
   };
 
   gl.canvas.addEventListener('wheel', function (e) {

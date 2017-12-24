@@ -91,16 +91,28 @@ const holoPlaneVert = `
 
 const holoPlaneFrag = `
   precision highp float;
-  uniform sampler2D uTexture0;
+  uniform sampler2D uTexture0; // sceneA framebuffer
+  uniform sampler2D uTexture1; // sceneB framebuffer
   uniform vec2 uScreenSize;
   uniform vec2 uMapScale;
 
   varying vec2 vTextureCoord;
 
   void main() {
-    vec3 imgTex = texture2D(uTexture0, gl_FragCoord.xy / uScreenSize).rgb;
+    vec4 lookupTex = texture2D(uTexture1, gl_FragCoord.xy / uScreenSize);
 
-    gl_FragColor = vec4(imgTex, 1.0);
+    if (lookupTex.b <= 0.0) {
+      discard;
+    }
+
+    vec2 st = lookupTex.ba;
+    vec2 uv = lookupTex.rg;
+
+    vec2 uvOffset = floor(uv * uMapScale) / uMapScale;
+    vec2 stOffset = st / uMapScale;
+    vec3 mapLookup = texture2D(uTexture0, uv).rgb;
+
+    gl_FragColor = vec4(mapLookup, 1.0);
   }
 `;
 

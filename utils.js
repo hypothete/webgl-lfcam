@@ -124,8 +124,9 @@ function Model (gl, name, mesh, parent, shaderProgram, shaderLocations) {
   return model;
 }
 
-function Camera (gl, fov, near, far, viewport, parent) {
+function Camera (gl, name, fov, near, far, viewport, parent) {
   const cam = {
+    name,
     fov,
     near,
     far,
@@ -159,8 +160,10 @@ function Camera (gl, fov, near, far, viewport, parent) {
   return cam;
 }
 
-function LightFieldCamera (gl, fov, near, far, side, spread, helperProgram, helperLocations, parent) {
+function LightFieldCamera (gl, name, fov, near, far, side, spread, helperProgram, helperLocations, parent) {
   let cam = {
+    name,
+    matrix: mat4.create(),
     translation: vec3.create(),
     rotation: vec3.create(),
     side,
@@ -181,6 +184,7 @@ function LightFieldCamera (gl, fov, near, far, side, spread, helperProgram, help
       mat4.multiply(cam.matrix, cam.matrix, rotMat);
     },
     render: function (scene) {
+      cam.updateMatrix();
       for (let camera of cam.cameras) {
         camera.render(scene);
       }
@@ -220,8 +224,9 @@ function LightFieldCamera (gl, fov, near, far, side, spread, helperProgram, help
         w: gl.canvas.width / side,
         h: gl.canvas.height / side
       };
-      let newCam = new Camera(gl, fov, near, far, camView);
-      vec3.set(newCam.translation, vec3.fromValues((i - halfSide) * spread, (j - halfSide) * spread, 0));
+      let camName = 'lf cam ' + i + ' ' + j;
+      let newCam = new Camera(gl, camName, fov, near, far, camView, cam);
+      vec3.set(newCam.translation, (i - halfSide) * spread, (j - halfSide) * spread, 0);
       cam.cameras.push(newCam);
     }
   }
