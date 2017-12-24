@@ -166,6 +166,6 @@ function enableControls () {
     let nDy = 2 * (e.offsetY / gl.canvas.offsetHeight) - 1;
 
     vec3.set(teapot.rotation, 0, nDx * 180, 22.5);
-    vec3.set(otherTeapot.rotation, 0, nDx * 180, 0);
+    vec3.set(otherTeapot.rotation, nDx * 720, 0, 0);
   };
 }
