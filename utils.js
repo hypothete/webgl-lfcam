@@ -33,7 +33,7 @@ function loadShader(gl, type, source) {
 
 function Scene () {
   const scene = {
-    matrix: mat4.identity(mat4.create()),
+    matrix: mat4.create(),
     children: []
   };
   return scene;
@@ -55,35 +55,32 @@ function Model (gl, name, mesh, parent, shaderProgram, shaderLocations) {
     updateMatrix: function () {
       const rotQuat = quat.fromEuler(quat.create(), model.rotation[0], model.rotation[1], model.rotation[2]);
       const rotMat = mat4.fromQuat(mat4.create(), rotQuat);
-      const transMat = mat4.fromTranslation(mat4.create(), model.translation);
-      const scaleMat = mat4.fromScaling(mat4.create(), model.scale);
       mat4.copy(model.matrix, mat4.create());
-      mat4.multiply(model.matrix, model.matrix, model.parent.matrix);
-
-      mat4.multiply(model.matrix, model.matrix, transMat);
+      mat4.translate(model.matrix, model.matrix, model.translation);
       mat4.multiply(model.matrix, model.matrix, rotMat);
-      mat4.multiply(model.matrix, model.matrix, scaleMat);
-
-      // now multiply in the parent matrix
-
+      mat4.scale(model.matrix, model.matrix, model.scale);
     },
     draw: function () {
       model.updateMatrix();
+      let parentMVMatrix = matrixStack[matrixStack.length-1];
+      let worldMVMatrix = mat4.multiply(mat4.create(), parentMVMatrix, model.matrix,);
+      matrixStack.push(worldMVMatrix);
 
       for (let child of model.children) {
         child.draw();
       }
 
+      matrixStack.pop();
+
       if (typeof model.mesh === 'undefined' || model.mesh == null) {
         return;
       }
 
-      mat4.multiply(modelViewMatrix, model.matrix, viewMatrix);
-      mat3.normalFromMat4(normalMatrix, modelViewMatrix);
+      mat3.normalFromMat4(normalMatrix, worldMVMatrix);
       gl.useProgram(model.shaderProgram);
 
       gl.uniformMatrix4fv(model.shaderLocations.uniformLocations.projectionMatrix, false, projectionMatrix);
-      gl.uniformMatrix4fv(model.shaderLocations.uniformLocations.modelViewMatrix, false, modelViewMatrix);
+      gl.uniformMatrix4fv(model.shaderLocations.uniformLocations.modelViewMatrix, false, worldMVMatrix);
 
       if (typeof model.shaderLocations.uniformLocations.normalMatrix !== 'undefined') {
         gl.uniformMatrix3fv(model.shaderLocations.uniformLocations.normalMatrix, false, normalMatrix);
@@ -115,7 +112,6 @@ function Model (gl, name, mesh, parent, shaderProgram, shaderLocations) {
 
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.mesh.indexBuffer);
       gl.drawElements(gl.TRIANGLES, model.mesh.indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-
     }
   };
   if (parent && parent.children) {
@@ -138,11 +134,10 @@ function Camera (gl, name, fov, near, far, viewport, parent) {
     updateMatrix () {
       const rotQuat = quat.fromEuler(quat.create(), cam.rotation[0], cam.rotation[1], cam.rotation[2]);
       const rotMat = mat4.fromQuat(mat4.create(), rotQuat);
-      const transMat = mat4.fromTranslation(mat4.create(), cam.translation);
       mat4.copy(cam.matrix, mat4.create());
-      mat4.multiply(cam.matrix, cam.matrix, cam.parent.matrix);
-      mat4.multiply(cam.matrix, cam.matrix, transMat);
+      mat4.translate(cam.matrix, cam.matrix, cam.translation);
       mat4.multiply(cam.matrix, cam.matrix, rotMat);
+
     },
     render (scene) {
       cam.updateMatrix();
@@ -151,9 +146,17 @@ function Camera (gl, name, fov, near, far, viewport, parent) {
       gl.scissor(cam.viewport.x, cam.viewport.y, cam.viewport.w, cam.viewport.h);
       mat4.invert(viewMatrix, cam.matrix);
       mat4.perspective(projectionMatrix, cam.fov, cam.viewport.w/cam.viewport.h, cam.near, cam.far);
+
+      matrixStack = [];
+
+      matrixStack.push(mat4.multiply(mat4.create(), viewMatrix, scene.matrix));
+
       for (let child of scene.children) {
         child.draw();
       }
+
+      matrixStack.pop();
+
       gl.disable(gl.SCISSOR_TEST);
     }
   };
@@ -201,6 +204,7 @@ function LightFieldCamera (gl, name, fov, near, far, side, spread, helperProgram
     },
     drawHelper: function () {
       cam.updateMatrix();
+      mat4.multiply(modelViewMatrix, cam.matrix, viewMatrix);
 
       gl.useProgram(cam.shaderProgram);
 

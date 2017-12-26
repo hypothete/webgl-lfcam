@@ -1,7 +1,9 @@
 const can = document.querySelector('canvas');
 const gl = can.getContext('webgl');
 
-var teapot, stPlane, uvPlane, planes, otherTeapot, holo, holoPlane;
+var teapot, stPlane, uvPlane,
+  planes, otherTeapot, teapotPivot,
+  holo, holoPlane, pivot;
 
 const sceneA = new Scene(); // Imaging scene
 const sceneB = new Scene(); // STUV planes
@@ -16,6 +18,7 @@ const viewMatrix = mat4.create();
 const modelViewMatrix = mat4.create();
 const projectionMatrix = mat4.create();
 const normalMatrix = mat3.create();
+var matrixStack = [];
 
 const teapotShaderProgram = initShaderProgram(gl, teapotVert, teapotFrag);
 const teapotShaderLocations = {
@@ -88,12 +91,13 @@ const lfCam = new LightFieldCamera(gl,
   'light field cam',
   Math.PI / 4,
   1.0, 100.0,
-  5,
+  3,
   0.5,
   helperShaderProgram,
   helperShaderLocations,
   sceneA
 );
+vec3.set(lfCam.translation, 0, 0, 0);
 
 // camera for scenes B and C
 const vCam = new Camera(gl,
@@ -103,6 +107,7 @@ const vCam = new Camera(gl,
   { x: 0, y: 0, w: gl.canvas.width, h: gl.canvas.height },
   sceneA
 );
+vec3.set(vCam.translation, 0, 0, 4);
 
 const objRequest = new Request('./teapot-scaled.obj');
 const plnRequest = new Request('./plane.obj');
@@ -123,15 +128,18 @@ Promise.all([
   // set up teapots in scene to be imaged
   const teapotMesh = new OBJ.Mesh(secondBundle[0]);
   OBJ.initMeshBuffers(gl, teapotMesh);
+
+  pivot = new Model(gl, 'tpivot', null, sceneA);
+
   teapot = new Model(gl, 'teapot', teapotMesh, sceneA, teapotShaderProgram, teapotShaderLocations);
   teapot.textures.push(secondBundle[2]);
-  sceneA.children.push(teapot);
   vec3.set(teapot.translation, 0, 0, -4);
-  //vec3.set(teapot.rotation, 0, 0, 22.5);
-  otherTeapot = new Model(gl, 'other teapot', teapotMesh, teapot, teapotShaderProgram, teapotShaderLocations);
+
+  teapotPivot = new Model(gl, 'pivot', null, teapot);
+
+  otherTeapot = new Model(gl, 'other teapot', teapotMesh, teapotPivot, teapotShaderProgram, teapotShaderLocations);
   otherTeapot.textures.push(secondBundle[2]);
-  teapot.children.push(otherTeapot);
-  vec3.set(otherTeapot.translation, 1, 0.5, 0);
+  vec3.set(otherTeapot.translation, 0, 0.5, 0);
   vec3.set(otherTeapot.scale, 0.5, 0.5, 0.5);
 
   // UV and ST planes in framebuffer for determining ray angle
@@ -161,9 +169,9 @@ Promise.all([
   gl.enable(gl.CULL_FACE);
   gl.enable(gl.DEPTH_TEST);
   gl.disable(gl.BLEND);
-  drawMap();
+  //drawMap();
   enableControls();
-  //gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   animate();
 
   function animate () {
@@ -190,7 +198,7 @@ function drawScene() {
   // light field view
   gl.disable(gl.BLEND);
   gl.enable(gl.DEPTH_TEST);
-  lfCam.render(sceneA);
+  vCam.render(sceneA);
 
   // stuv planes view
   //gl.bindFramebuffer(gl.FRAMEBUFFER, sceneBfb.buffer);
@@ -200,7 +208,8 @@ function drawScene() {
   // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   // gl.enable(gl.BLEND);
   // gl.disable(gl.DEPTH_TEST);
-  // //lfCam.drawHelper();
+  //lfCam.drawHelper();
+  //lfCam.render(sceneA);
   // gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.SRC_ALPHA);
   // vCam.render(sceneB);
 
@@ -220,13 +229,10 @@ function enableControls () {
     let nDx = -2 * (e.offsetX / gl.canvas.offsetWidth) + 1;
     let nDy = 2 * (e.offsetY / gl.canvas.offsetHeight) - 1;
 
-    vec3.set(planes.rotation, 0, -nDx * 180, 0);
-    vec3.set(holo.rotation, 0, -nDx * 180, 0);
-
-    vec3.set(lfCam.rotation, 0, nDx * 180, 0);
-
-    // vec3.set(teapot.rotation, 0, nDx * 180, 22.5);
-    // vec3.set(otherTeapot.rotation, nDx * 720, 0, 0);
+    // vec3.set(planes.rotation, 0, -nDx * 180, 0);
+    // vec3.set(holo.rotation, 0, -nDx * 180, 0);
+    //vec3.set(otherTeapot.scale, nDy, nDy, nDy);
+    //vec3.set(teapot.rotation, -nDx * 180, 0, 0);
   };
 
   gl.canvas.addEventListener('wheel', function (e) {
