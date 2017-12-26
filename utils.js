@@ -120,14 +120,13 @@ function Model (gl, name, mesh, parent, shaderProgram, shaderLocations) {
   return model;
 }
 
-function Camera (gl, name, fov, near, far, viewport, parent) {
+function Camera (gl, name, fov, near, far, viewport) {
   const cam = {
     name,
     fov,
     near,
     far,
     viewport,
-    parent: parent || { matrix: mat4.create() },
     matrix: mat4.create(),
     translation: vec3.create(),
     rotation: vec3.create(),
@@ -137,10 +136,13 @@ function Camera (gl, name, fov, near, far, viewport, parent) {
       mat4.copy(cam.matrix, mat4.create());
       mat4.translate(cam.matrix, cam.matrix, cam.translation);
       mat4.multiply(cam.matrix, cam.matrix, rotMat);
-
     },
-    render (scene) {
+    render (scene, parent) {
       cam.updateMatrix();
+      if (parent) {
+        mat4.multiply(cam.matrix, parent.matrix, cam.matrix);
+      }
+
       gl.viewport(cam.viewport.x, cam.viewport.y, cam.viewport.w, cam.viewport.h);
       gl.enable(gl.SCISSOR_TEST);
       gl.scissor(cam.viewport.x, cam.viewport.y, cam.viewport.w, cam.viewport.h);
@@ -189,7 +191,7 @@ function LightFieldCamera (gl, name, fov, near, far, side, spread, helperProgram
     render: function (scene) {
       cam.updateMatrix();
       for (let camera of cam.cameras) {
-        camera.render(scene);
+        camera.render(scene, cam);
       }
     },
     updateCamPosArray: function () {

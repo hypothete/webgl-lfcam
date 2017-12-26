@@ -101,7 +101,7 @@ const holoPlaneFrag = `
   void main() {
     vec4 lookupTex = texture2D(uTexture1, gl_FragCoord.xy / uScreenSize);
 
-    if (lookupTex.b <= 0.0) {
+    if (lookupTex.r <= 0.0 || lookupTex.g <= 0.0 || lookupTex.b <= 0.0) {
       discard;
     }
 
@@ -109,10 +109,10 @@ const holoPlaneFrag = `
     vec2 uv = lookupTex.rg;
 
     vec2 uvOffset = floor(uv * uMapScale) / uMapScale;
-    vec2 stOffset = st / uMapScale;
-    vec3 mapLookup = texture2D(uTexture0, uv).rgb;
+    vec2 stOffset = st;
+    vec3 mapLookup = texture2D(uTexture0, uvOffset/uMapScale.x).rgb;
 
-    gl_FragColor = vec4(mapLookup, 1.0);
+    gl_FragColor = vec4(lookupTex.rgb, 1.0);
   }
 `;
 
