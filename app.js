@@ -98,7 +98,7 @@ const lfCam = new LightFieldCamera(gl,
   1/1,
   1.0, 100.0,
   17,
-  0.3,
+  0.2,
   helperShaderProgram,
   helperShaderLocations
 );
@@ -136,7 +136,7 @@ Promise.all([
 
   teapot = new Model(gl, 'teapot', teapotMesh, sceneA, teapotShaderProgram, teapotShaderLocations);
   teapot.textures.push(secondBundle[2]);
-  vec3.set(teapot.translation, 0, 0, -2);
+  vec3.set(teapot.translation, 0, 0, -3);
 
   teapotPivot = new Model(gl, 'pivot', null, teapot);
 
