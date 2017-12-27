@@ -60,7 +60,7 @@ const uvplaneFrag = `
   varying vec2 vTextureCoord;
 
   void main() {
-    gl_FragColor = vec4(vTextureCoord, 0.0, 1.0);
+    gl_FragColor = vec4(vTextureCoord, 0.0, 0.0);
   }
 `;
 
@@ -105,14 +105,16 @@ const holoPlaneFrag = `
       discard;
     }
 
-    vec2 st = lookupTex.ba;
     vec2 uv = lookupTex.rg;
+    vec2 st = lookupTex.ba;
 
-    vec2 uvOffset = floor(uv * uMapScale) / uMapScale;
-    vec2 stOffset = st;
-    vec3 mapLookup = texture2D(uTexture0, uvOffset/uMapScale.x).rgb;
+    vec2 uvMinOffset = floor(uv * uMapScale) / uMapScale;
+    vec2 uvMaxOffset = ceil(uv * uMapScale) / uMapScale;
+    vec2 stOffset = st / uMapScale ;
+    vec4 colorSample = texture2D(uTexture0, uvMaxOffset + stOffset);
 
-    gl_FragColor = vec4(lookupTex.rgb, 1.0);
+
+    gl_FragColor = vec4(colorSample.rgb, 1.0);
   }
 `;
 

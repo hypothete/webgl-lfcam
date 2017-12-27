@@ -3,7 +3,10 @@ const gl = can.getContext('webgl');
 
 var teapot, stPlane, uvPlane,
   planes, otherTeapot, teapotPivot,
-  holo, holoPlane, pivot;
+  holo, holoPlane;
+
+can.width = window.innerWidth;
+can.height = window.innerHeight;
 
 const sceneA = new Scene(); // Imaging scene
 const sceneB = new Scene(); // STUV planes
@@ -92,26 +95,24 @@ var noiseTexture;
 const lfCam = new LightFieldCamera(gl,
   'light field cam',
   Math.PI / 4,
+  1/1,
   1.0, 100.0,
-  5,
-  0.2,
+  17,
+  0.3,
   helperShaderProgram,
   helperShaderLocations
 );
 vec3.set(lfCam.translation, 0, 0, 0);
 
 // camera for scenes B and C
-// pivot = new Model(gl, 'tpivot', null, sceneA);
-// vec3.set(pivot.translation, 0, 0, 4);
-// pivot.updateMatrix();
-
 const vCam = new Camera(gl,
   'view cam',
   Math.PI / 4,
+  gl.canvas.width / gl.canvas.height,
   1.0, 100.0,
   { x: 0, y: 0, w: gl.canvas.width, h: gl.canvas.height }
 );
-vec3.set(vCam.translation, 0, 0, 4);
+vec3.set(vCam.translation, 0, 0, 0);
 
 const objRequest = new Request('./teapot-scaled.obj');
 const plnRequest = new Request('./plane.obj');
@@ -135,7 +136,7 @@ Promise.all([
 
   teapot = new Model(gl, 'teapot', teapotMesh, sceneA, teapotShaderProgram, teapotShaderLocations);
   teapot.textures.push(secondBundle[2]);
-  vec3.set(teapot.translation, 0, 0, -4);
+  vec3.set(teapot.translation, 0, 0, -2);
 
   teapotPivot = new Model(gl, 'pivot', null, teapot);
 
@@ -153,7 +154,6 @@ Promise.all([
   vec3.set(uvPlane.translation, 0, 0, 1);
   vec3.set(stPlane.translation, 0, 0, -1);
   vec3.set(planes.translation, 0, 0, -4);
-  vec3.set(uvPlane.scale, lfCam.spread * lfCam.side, lfCam.spread * lfCam.side, 1);
 
   // Final scene
   holo = new Model(gl, 'Planes', null, sceneC);
@@ -167,7 +167,7 @@ Promise.all([
   holoPlane.textures.push(sceneBfb.texture);
   vec3.set(holoPlane.translation, 0, 0, 1);
   vec3.set(holo.translation, 0, 0, -4);
-
+  vec3.set(holoPlane.scale, lfCam.spread * lfCam.side, lfCam.spread * lfCam.side, 1);
   gl.enable(gl.CULL_FACE);
   gl.enable(gl.DEPTH_TEST);
   gl.disable(gl.BLEND);
@@ -183,30 +183,31 @@ Promise.all([
 
 function drawMap () {
   gl.bindFramebuffer(gl.FRAMEBUFFER, sceneAfb.buffer);
-  //gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  gl.clearColor(0.1, 0, 0.2, 1.0);
+  gl.clearColor(0.0, 0, 0.1, 1.0);
   gl.clearDepth(1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   lfCam.render(sceneA);
 }
 
 function drawScene() {
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.clearColor(0.0, 0.0, 0.0, 0.0);
   gl.clearDepth(1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
   if (viewCode === 'a') {
     // light field view
     gl.disable(gl.BLEND);
     gl.enable(gl.DEPTH_TEST);
+    gl.clearColor(0.0, 0, 0.1, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     lfCam.render(sceneA);
   }
   else if (viewCode === 'b') {
     // stuv planes view
     gl.enable(gl.BLEND);
     gl.disable(gl.DEPTH_TEST);
-    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.SRC_ALPHA);
+    gl.blendFuncSeparate(gl.ONE, gl.ONE, gl.ONE, gl.SRC_ALPHA);
     vCam.render(sceneB);
   }
   else if (viewCode === 'c') {
@@ -216,12 +217,11 @@ function drawScene() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.BLEND);
     gl.disable(gl.DEPTH_TEST);
-    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.SRC_ALPHA);
+    gl.blendFuncSeparate(gl.ONE, gl.ONE, gl.ONE, gl.SRC_ALPHA);
     vCam.render(sceneB);
-
     // holo view
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.clearColor(0.0, 0.0, 0.0, 0.0);
+    gl.clearColor(0.1, 0.0, 0.0, 1.0);
     gl.clearDepth(1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.BLEND);
@@ -235,16 +235,16 @@ function enableControls () {
     let nDx = -2 * (e.offsetX / gl.canvas.offsetWidth) + 1;
     let nDy = 2 * (e.offsetY / gl.canvas.offsetHeight) - 1;
 
-    vec3.set(planes.rotation, 0, -nDx * 180, 0);
-    vec3.set(holo.rotation, 0, -nDx * 180, 0);
+    vec3.set(planes.rotation, nDy * 180, -nDx * 180, 0);
+    vec3.set(holo.rotation, nDy * 180, -nDx * 180, 0);
     //vec3.set(otherTeapot.scale, nDy, nDy, nDy);
     // vec3.set(lfCam.rotation, 0, -nDx * 180, 0);
   };
 
   gl.canvas.addEventListener('wheel', function (e) {
-    let scroll = Math.abs(e.deltaY)/e.deltaY;
-    vec3.add(planes.translation, planes.translation, vec3.fromValues(0, 0, scroll));
-    vec3.add(holo.translation, holo.translation, vec3.fromValues(0, 0, scroll));
+    let scroll = 0.5 * Math.abs(e.deltaY)/e.deltaY;
+    // offset the st plane to refocus at depth
+    vec3.add(stPlane.translation, stPlane.translation, vec3.fromValues(0, 0, scroll));
   });
 
   document.addEventListener('keyup', function (e) {
