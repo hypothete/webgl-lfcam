@@ -56,19 +56,27 @@ const planeVert = `
 
 const uvplaneFrag = `
   precision highp float;
+  uniform sampler2D uTexture0;
   varying vec2 vTextureCoord;
 
   void main() {
-    gl_FragColor = vec4(vTextureCoord, 0.0, 0.0);
+    float noise = texture2D(uTexture0, vTextureCoord).r;
+    float jitter = mix(-0.5/255.0, 0.5/255.0, noise);
+    vec2 outColor = clamp(vTextureCoord + vec2(jitter),vec2(0.0), vec2(1.0));
+    gl_FragColor = vec4(outColor, 0.0, 0.0);
   }
 `;
 
 const stplaneFrag = `
   precision highp float;
+  uniform sampler2D uTexture0;
   varying vec2 vTextureCoord;
 
   void main() {
-    gl_FragColor = vec4(0.0, 0.0, vTextureCoord);
+    float noise = texture2D(uTexture0, vTextureCoord).r;
+    float jitter = mix(-0.5/255.0, 0.5/255.0, noise);
+    vec2 outColor = clamp(vTextureCoord + vec2(jitter),vec2(0.0), vec2(1.0));
+    gl_FragColor = vec4(0.0, 0.0, outColor);
   }
 `;
 
@@ -99,7 +107,7 @@ const holoPlaneFrag = `
   void main() {
     vec4 lookupTex = texture2D(uTexture1, gl_FragCoord.xy / uScreenSize);
 
-    if (lookupTex.r <= 0.0 || lookupTex.g <= 0.0 || lookupTex.b <= 0.0) {
+    if (lookupTex.b <= 0.0) {
       discard;
     }
 

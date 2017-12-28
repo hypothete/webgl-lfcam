@@ -23,7 +23,7 @@ const projectionMatrix = mat4.create();
 const normalMatrix = mat3.create();
 var matrixStack = [];
 
-var viewCode = 'a';
+var viewCode = 'c';
 
 const teapotShaderProgram = initShaderProgram(gl, teapotVert, teapotFrag);
 const teapotShaderLocations = {
@@ -60,7 +60,8 @@ const stPlaneShaderLocations = {
   },
   uniformLocations: {
     projectionMatrix: gl.getUniformLocation(stPlaneShaderProgram, 'uProjectionMatrix'),
-    modelViewMatrix: gl.getUniformLocation(stPlaneShaderProgram, 'uModelViewMatrix')
+    modelViewMatrix: gl.getUniformLocation(stPlaneShaderProgram, 'uModelViewMatrix'),
+    texture0: gl.getUniformLocation(stPlaneShaderProgram, 'uTexture0'),
   },
 };
 
@@ -95,10 +96,10 @@ var noiseTexture;
 
 const lfCam = new LightFieldCamera(gl,
   'light field cam',
-  0.2, //Math.PI / 4,
+  Math.PI / 4,
   1/1,
   1.0, 100.0,
-  99,
+  17,
   0.03,
   helperShaderProgram,
   helperShaderLocations
@@ -126,7 +127,9 @@ Promise.all([
   return Promise.all([
     bundle[0].text(),
     bundle[1].text(),
-    promiseTexture(gl, './rednoise.png')
+    promiseTexture(gl, './rednoise.png'),
+    promiseTexture(gl, './ball.jpg'),
+    promiseTexture(gl, './bignoise.png')
   ]);
 })
 .then((secondBundle) => {
@@ -152,6 +155,8 @@ Promise.all([
   planes = new Model(gl, 'Planes', null, sceneB);
   uvPlane = new Model(gl, 'UV Plane', planeMesh, planes, uvPlaneShaderProgram, uvPlaneShaderLocations);
   stPlane = new Model(gl, 'ST Plane', planeMesh, planes, stPlaneShaderProgram, stPlaneShaderLocations);
+  uvPlane.textures.push(secondBundle[3]);
+  stPlane.textures.push(secondBundle[3]);
   vec3.set(uvPlane.translation, 0, 0, 1);
   vec3.set(stPlane.translation, 0, 0, -1);
   vec3.set(planes.translation, 0, 0, -4);
@@ -164,11 +169,10 @@ Promise.all([
   gl.useProgram(holoPlaneShaderProgram);
   gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.screenSize, screenSize);
   gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.mapScale, mapScale);
-  holoPlane.textures.push(sceneAfb.texture);
+  holoPlane.textures.push(secondBundle[3]);
   holoPlane.textures.push(sceneBfb.texture);
   vec3.set(holoPlane.translation, 0, 0, 1);
   vec3.set(holo.translation, 0, 0, -4);
-  vec3.set(holoPlane.scale, lfCam.spread * lfCam.side, lfCam.spread * lfCam.side, 1);
   gl.enable(gl.CULL_FACE);
   gl.enable(gl.DEPTH_TEST);
   gl.disable(gl.BLEND);
@@ -236,8 +240,13 @@ function enableControls () {
     let nDx = -2 * (e.offsetX / gl.canvas.offsetWidth) + 1;
     let nDy = 2 * (e.offsetY / gl.canvas.offsetHeight) - 1;
 
-    vec3.set(planes.rotation, nDy * 180, -nDx * 180, 0);
-    vec3.set(holo.rotation, nDy * 180, -nDx * 180, 0);
+    // vec3.set(planes.rotation, nDy * 180, -nDx * 180, 0);
+    // vec3.set(holo.rotation, nDy * 180, -nDx * 180, 0);
+
+    //vec3.set(vCam.translation, -nDx, -nDy, 0);
+
+    vec3.set(planes.translation, -nDx * 2, -nDy * 2, -4);
+    vec3.set(holo.translation, -nDx * 2, -nDy * 2, -4);
     //vec3.set(otherTeapot.scale, nDy, nDy, nDy);
     // vec3.set(lfCam.rotation, 0, -nDx * 180, 0);
   };
