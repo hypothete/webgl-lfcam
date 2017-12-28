@@ -49,7 +49,8 @@ const uvPlaneShaderLocations = {
   },
   uniformLocations: {
     projectionMatrix: gl.getUniformLocation(uvPlaneShaderProgram, 'uProjectionMatrix'),
-    modelViewMatrix: gl.getUniformLocation(uvPlaneShaderProgram, 'uModelViewMatrix')
+    modelViewMatrix: gl.getUniformLocation(uvPlaneShaderProgram, 'uModelViewMatrix'),
+    texture0: gl.getUniformLocation(uvPlaneShaderProgram, 'uTexture0')
   },
 };
 const stPlaneShaderLocations = {
@@ -94,11 +95,11 @@ var noiseTexture;
 
 const lfCam = new LightFieldCamera(gl,
   'light field cam',
-  Math.PI / 4,
+  0.2, //Math.PI / 4,
   1/1,
   1.0, 100.0,
-  17,
-  0.2,
+  99,
+  0.03,
   helperShaderProgram,
   helperShaderLocations
 );
@@ -136,7 +137,7 @@ Promise.all([
 
   teapot = new Model(gl, 'teapot', teapotMesh, sceneA, teapotShaderProgram, teapotShaderLocations);
   teapot.textures.push(secondBundle[2]);
-  vec3.set(teapot.translation, 0, 0, -3);
+  vec3.set(teapot.translation, 0, 0, -2);
 
   teapotPivot = new Model(gl, 'pivot', null, teapot);
 
@@ -242,7 +243,7 @@ function enableControls () {
   };
 
   gl.canvas.addEventListener('wheel', function (e) {
-    let scroll = 0.5 * Math.abs(e.deltaY)/e.deltaY;
+    let scroll = 0.1 * Math.abs(e.deltaY)/e.deltaY;
     // offset the st plane to refocus at depth
     vec3.add(stPlane.translation, stPlane.translation, vec3.fromValues(0, 0, scroll));
   });

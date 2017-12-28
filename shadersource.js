@@ -56,7 +56,6 @@ const planeVert = `
 
 const uvplaneFrag = `
   precision highp float;
-
   varying vec2 vTextureCoord;
 
   void main() {
@@ -66,7 +65,6 @@ const uvplaneFrag = `
 
 const stplaneFrag = `
   precision highp float;
-
   varying vec2 vTextureCoord;
 
   void main() {
@@ -107,14 +105,29 @@ const holoPlaneFrag = `
 
     vec2 uv = lookupTex.rg;
     vec2 st = lookupTex.ba;
+    vec2 uvScale = uv * uMapScale;
+    vec2 weight = fract(uvScale);
+    vec2 uvMinOff = floor(uvScale) / uMapScale;
+    vec2 uvMaxOff = ceil(uvScale) / uMapScale;
+    vec2 stOff = st / uMapScale;
 
-    vec2 uvMinOffset = floor(uv * uMapScale) / uMapScale;
-    vec2 uvMaxOffset = ceil(uv * uMapScale) / uMapScale;
-    vec2 stOffset = st / uMapScale ;
-    vec4 colorSample = texture2D(uTexture0, uvMaxOffset + stOffset);
+    vec2 sampleA = uvMinOff + stOff;
+    vec2 sampleB = vec2(uvMaxOff.x, uvMinOff.y) + stOff;
+    vec2 sampleC = vec2(uvMinOff.x, uvMaxOff.y) + stOff;
+    vec2 sampleD = uvMaxOff + stOff;
 
+    vec4 colorSampleA = texture2D(uTexture0, sampleA);
+    vec4 colorSampleB = texture2D(uTexture0, sampleB);
+    vec4 colorSampleC = texture2D(uTexture0, sampleC);
+    vec4 colorSampleD = texture2D(uTexture0, sampleD);
 
-    gl_FragColor = vec4(colorSample.rgb, 1.0);
+    vec4 quadInterp = mix(
+      mix(colorSampleA, colorSampleB, weight.x),
+      mix(colorSampleC, colorSampleD, weight.x),
+      weight.y
+    );
+
+    gl_FragColor = vec4(quadInterp.rgb, 1.0);
   }
 `;
 
