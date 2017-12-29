@@ -5,16 +5,16 @@ var teapot, stPlane, uvPlane,
   planes, otherTeapot, teapotPivot,
   holo, holoPlane;
 
-can.width = window.innerWidth;
-can.height = window.innerHeight;
+can.width = gl.canvas.clientWidth;
+can.height = gl.canvas.clientHeight;
 
 const sceneA = new Scene(); // Imaging scene
 const sceneB = new Scene(); // STUV planes
 const sceneC = new Scene(); // Final scene
 
-const sceneAfb = makeFramebuffer(gl); // buffer for storing sceneA
+var sceneAfb = makeFramebuffer(gl); // buffer for storing sceneA
 const depthBufferA = makeDepthBuffer(gl);
-const sceneBfb = makeFramebuffer(gl); // buffer for sceneB
+var sceneBfb = makeFramebuffer(gl); // buffer for sceneB
 const depthBufferB = makeDepthBuffer(gl);
 
 const viewMatrix = mat4.create();
@@ -49,8 +49,7 @@ const uvPlaneShaderLocations = {
   },
   uniformLocations: {
     projectionMatrix: gl.getUniformLocation(uvPlaneShaderProgram, 'uProjectionMatrix'),
-    modelViewMatrix: gl.getUniformLocation(uvPlaneShaderProgram, 'uModelViewMatrix'),
-    texture0: gl.getUniformLocation(uvPlaneShaderProgram, 'uTexture0')
+    modelViewMatrix: gl.getUniformLocation(uvPlaneShaderProgram, 'uModelViewMatrix')
   },
 };
 const stPlaneShaderLocations = {
@@ -60,8 +59,7 @@ const stPlaneShaderLocations = {
   },
   uniformLocations: {
     projectionMatrix: gl.getUniformLocation(stPlaneShaderProgram, 'uProjectionMatrix'),
-    modelViewMatrix: gl.getUniformLocation(stPlaneShaderProgram, 'uModelViewMatrix'),
-    texture0: gl.getUniformLocation(stPlaneShaderProgram, 'uTexture0'),
+    modelViewMatrix: gl.getUniformLocation(stPlaneShaderProgram, 'uModelViewMatrix')
   },
 };
 
@@ -81,17 +79,6 @@ const holoPlaneShaderLocations = {
   },
 };
 
-const helperShaderProgram = initShaderProgram(gl, helperVert, helperFrag);
-const helperShaderLocations = {
-  attribLocations: {
-    vertexPosition: gl.getAttribLocation(helperShaderProgram, 'aVertexPosition')
-  },
-  uniformLocations: {
-    projectionMatrix: gl.getUniformLocation(helperShaderProgram, 'uProjectionMatrix'),
-    modelViewMatrix: gl.getUniformLocation(helperShaderProgram, 'uModelViewMatrix')
-  },
-};
-
 var noiseTexture;
 
 const lfCam = new LightFieldCamera(gl,
@@ -101,9 +88,7 @@ const lfCam = new LightFieldCamera(gl,
   1.0, 100.0,
   17,
   0.15,
-  vec3.fromValues(0,0,-2),
-  helperShaderProgram,
-  helperShaderLocations
+  vec3.fromValues(0,0,-2)
 );
 vec3.set(lfCam.translation, 0, 0, 0);
 
@@ -132,7 +117,7 @@ Promise.all([
     // promiseTexture(gl, './ball.jpg'),
     // promiseTexture(gl, './dragon-uv.jpg'),
     // promiseTexture(gl, './book.jpg'),
-    promiseTexture(gl, './lego-giant.jpg'),
+    // promiseTexture(gl, './lego-giant.jpg'),
     promiseTexture(gl, './bignoise.png')
   ]);
 })
@@ -159,8 +144,6 @@ Promise.all([
   planes = new Model(gl, 'Planes', null, sceneB);
   uvPlane = new Model(gl, 'UV Plane', planeMesh, planes, uvPlaneShaderProgram, uvPlaneShaderLocations);
   stPlane = new Model(gl, 'ST Plane', planeMesh, planes, stPlaneShaderProgram, stPlaneShaderLocations);
-  uvPlane.textures.push(secondBundle[3]);
-  stPlane.textures.push(secondBundle[3]);
   vec3.set(uvPlane.translation, 0, 0, 2);
   vec3.set(stPlane.translation, 0, 0, 0);
   vec3.set(planes.translation, 0, 0, -5);
@@ -174,13 +157,11 @@ Promise.all([
   gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.screenSize, screenSize);
   gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.mapScale, mapScale);
   holoPlane.textures.push(sceneAfb.texture);
-  //holoPlane.textures.push(secondBundle[3]);
   holoPlane.textures.push(sceneBfb.texture);
   vec3.set(holoPlane.translation, 0, 0, 2);
   vec3.set(holo.translation, 0, 0, -5);
   gl.enable(gl.CULL_FACE);
-  gl.enable(gl.DEPTH_TEST);
-  gl.disable(gl.BLEND);
+
   drawMap();
   enableControls();
   animate();
@@ -192,6 +173,8 @@ Promise.all([
 });
 
 function drawMap () {
+  gl.enable(gl.DEPTH_TEST);
+  gl.disable(gl.BLEND);
   gl.bindFramebuffer(gl.FRAMEBUFFER, sceneAfb.buffer);
   gl.clearColor(0.0, 0, 0.1, 1.0);
   gl.clearDepth(1.0);
@@ -222,6 +205,8 @@ function drawScene() {
     vCam.render(sceneB);
   }
   else if (viewCode === 'c') {
+    vec3.add(otherTeapot.rotation, otherTeapot.rotation, vec3.fromValues(0, 1, 0));
+    drawMap();
     gl.bindFramebuffer(gl.FRAMEBUFFER, sceneBfb.buffer);
     gl.clearColor(0.0, 0.0, 0.0, 0.0);
     gl.clearDepth(1.0);
@@ -247,26 +232,16 @@ function enableControls () {
     let nDy = 2 * (e.offsetY / gl.canvas.offsetHeight) - 1;
 
     if (e.buttons) {
-      vec3.set(planes.rotation, nDy * 180, -nDx * 180, 0);
-      vec3.set(holo.rotation, nDy * 180, -nDx * 180, 0);
+      vec3.set(planes.rotation, nDy * 90, -nDx * 90, 0);
+      vec3.set(holo.rotation, nDy * 90, -nDx * 90, 0);
     }
-
-    //vec3.set(vCam.translation, -nDx, -nDy, 0);
-
-    // vec3.set(planes.translation, -nDx * 2, -nDy * 2, -4);
-    // vec3.set(holo.translation, -nDx * 2, -nDy * 2, -4);
-    //vec3.set(otherTeapot.scale, nDy, nDy, nDy);
-    // vec3.set(lfCam.rotation, 0, -nDx * 180, 0);
   };
 
   gl.canvas.addEventListener('wheel', function (e) {
     let scroll = 0.1 * Math.abs(e.deltaY)/e.deltaY;
-
     vec3.add(lfCam.target, lfCam.target, vec3.fromValues(0, 0, scroll));
     lfCam.focusCameras();
     drawMap();
-    // vec3.add(planes.translation, planes.translation, vec3.fromValues(0, 0, scroll));
-    // vec3.add(holo.translation, holo.translation, vec3.fromValues(0, 0, scroll));
   });
 
   document.addEventListener('keyup', function (e) {
@@ -282,5 +257,21 @@ function enableControls () {
       // c
       viewCode = 'c';
     }
+  });
+
+  window.addEventListener('resize', function () {
+    gl.canvas.width = gl.canvas.clientWidth;
+    gl.canvas.height = gl.canvas.clientHeight;
+    vCam.viewport.w = gl.canvas.clientWidth;
+    vCam.viewport.h = gl.canvas.clientHeight;
+    vCam.aspect = vCam.viewport.w / vCam.viewport.h;
+    gl.useProgram(holoPlaneShaderProgram);
+    const screenSize = new Float32Array([gl.canvas.clientWidth, gl.canvas.clientHeight]);
+    gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.screenSize, screenSize);
+    lfCam.updateViewports();
+    sceneAfb = makeFramebuffer(gl);
+    sceneBfb = makeFramebuffer(gl);
+    holoPlane.textures[0] = sceneAfb.texture;
+    holoPlane.textures[1] = sceneBfb.texture;
   });
 }

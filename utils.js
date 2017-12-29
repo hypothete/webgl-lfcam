@@ -165,7 +165,7 @@ function Camera (gl, name, fov, aspect, near, far, viewport) {
   return cam;
 }
 
-function LightFieldCamera (gl, name, fov, aspect, near, far, side, spread, target, helperProgram, helperLocations, parent) {
+function LightFieldCamera (gl, name, fov, aspect, near, far, side, spread, target, parent) {
   let cam = {
     name,
     matrix: mat4.create(),
@@ -175,8 +175,6 @@ function LightFieldCamera (gl, name, fov, aspect, near, far, side, spread, targe
     cameras: [],
     camPosArray: [],
     camPosBuffer: gl.createBuffer(),
-    shaderProgram: helperProgram,
-    shaderLocations: helperLocations,
     parent: parent || { matrix: mat4.create() },
     updateMatrix () {
       const rotQuat = quat.fromEuler(quat.create(), cam.rotation[0], cam.rotation[1], cam.rotation[2]);
@@ -213,20 +211,20 @@ function LightFieldCamera (gl, name, fov, aspect, near, far, side, spread, targe
         vec3.copy(camera.rotation, camEul);
       }
     },
-    drawHelper: function () {
-      cam.updateMatrix();
-      mat4.multiply(modelViewMatrix, cam.matrix, viewMatrix);
-
-      gl.useProgram(cam.shaderProgram);
-
-      gl.uniformMatrix4fv(cam.shaderLocations.uniformLocations.projectionMatrix, false, projectionMatrix);
-      gl.uniformMatrix4fv(cam.shaderLocations.uniformLocations.modelViewMatrix, false, modelViewMatrix);
-
-      gl.bindBuffer(gl.ARRAY_BUFFER, cam.camPosBuffer);
-      gl.vertexAttribPointer(cam.shaderLocations.attribLocations.vertexPosition, 3, gl.FLOAT, false, 0, 0);
-      gl.enableVertexAttribArray(cam.shaderLocations.attribLocations.vertexPosition);
-
-      gl.drawArrays(gl.POINTS, 0, cam.camPosArray.length/3);
+    updateViewports: function () {
+      for (let camera of cam.cameras) {
+        let camOffsets = camera.name.split(' ');
+        let camView = {
+          x: Number(camOffsets[0]) * gl.canvas.width / side,
+          y: Number(camOffsets[1]) * gl.canvas.height / side,
+          w: gl.canvas.width / side,
+          h: gl.canvas.height / side
+        };
+        camera.viewport.x = camView.x;
+        camera.viewport.y = camView.y;
+        camera.viewport.w = camView.w;
+        camera.viewport.h = camView.h;
+      }
     }
   };
   // set up array of cameras
@@ -240,7 +238,7 @@ function LightFieldCamera (gl, name, fov, aspect, near, far, side, spread, targe
         w: gl.canvas.width / side,
         h: gl.canvas.height / side
       };
-      let camName = 'lf cam ' + i + ' ' + j;
+      let camName = i + ' ' + j;
       let newCam = new Camera(gl, camName, fov, aspect, near, far, camView, cam);
       vec3.set(newCam.translation, (i - halfSide) * spread, (j - halfSide) * spread, 0);
       cam.cameras.push(newCam);

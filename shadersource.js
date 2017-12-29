@@ -56,27 +56,19 @@ const planeVert = `
 
 const uvplaneFrag = `
   precision highp float;
-  uniform sampler2D uTexture0;
   varying vec2 vTextureCoord;
 
   void main() {
-    float noise = texture2D(uTexture0, vTextureCoord).r;
-    float jitter = 0.0; // mix(-0.5/255.0, 0.5/255.0, noise);
-    vec2 outColor = vTextureCoord + vec2(jitter);
-    gl_FragColor = vec4(outColor, 0.0, 0.0);
+    gl_FragColor = vec4(vTextureCoord, 0.0, 0.0);
   }
 `;
 
 const stplaneFrag = `
   precision highp float;
-  uniform sampler2D uTexture0;
   varying vec2 vTextureCoord;
 
   void main() {
-    float noise = texture2D(uTexture0, vTextureCoord).r;
-    float jitter = 0.0; // mix(-0.5/255.0, 0.5/255.0, noise);
-    vec2 outColor = vTextureCoord + vec2(jitter);
-    gl_FragColor = vec4(0.0, 0.0, outColor);
+    gl_FragColor = vec4(0.0, 0.0, vTextureCoord);
   }
 `;
 
@@ -136,27 +128,5 @@ const holoPlaneFrag = `
     );
 
     gl_FragColor = vec4(quadInterp.rgb, 1.0);
-  }
-`;
-
-
-
-const helperVert = `
-  attribute vec4 aVertexPosition;
-
-  uniform mat4 uModelViewMatrix;
-  uniform mat4 uProjectionMatrix;
-
-  void main() {
-    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    gl_PointSize = 4.0;
-  }
-`;
-
-const helperFrag = `
-  precision highp float;
-
-  void main() {
-    gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
   }
 `;
