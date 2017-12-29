@@ -99,8 +99,8 @@ const lfCam = new LightFieldCamera(gl,
   Math.PI / 4,
   1/1,
   1.0, 100.0,
-  17,
-  0.03,
+  8,
+  0.1,
   helperShaderProgram,
   helperShaderLocations
 );
@@ -128,7 +128,8 @@ Promise.all([
     bundle[0].text(),
     bundle[1].text(),
     promiseTexture(gl, './rednoise.png'),
-    promiseTexture(gl, './ball.jpg'),
+    //promiseTexture(gl, './ball.jpg'),
+    promiseTexture(gl, './dragon-uv.jpg'),
     promiseTexture(gl, './bignoise.png')
   ]);
 })
@@ -157,9 +158,9 @@ Promise.all([
   stPlane = new Model(gl, 'ST Plane', planeMesh, planes, stPlaneShaderProgram, stPlaneShaderLocations);
   uvPlane.textures.push(secondBundle[3]);
   stPlane.textures.push(secondBundle[3]);
-  vec3.set(uvPlane.translation, 0, 0, 1);
-  vec3.set(stPlane.translation, 0, 0, -1);
-  vec3.set(planes.translation, 0, 0, -4);
+  vec3.set(uvPlane.translation, 0, 0, 2);
+  vec3.set(stPlane.translation, 0, 0, 0);
+  vec3.set(planes.translation, 0, 0, -5);
 
   // Final scene
   holo = new Model(gl, 'Planes', null, sceneC);
@@ -169,10 +170,11 @@ Promise.all([
   gl.useProgram(holoPlaneShaderProgram);
   gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.screenSize, screenSize);
   gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.mapScale, mapScale);
+  //holoPlane.textures.push(sceneAfb.texture);
   holoPlane.textures.push(secondBundle[3]);
   holoPlane.textures.push(sceneBfb.texture);
-  vec3.set(holoPlane.translation, 0, 0, 1);
-  vec3.set(holo.translation, 0, 0, -4);
+  vec3.set(holoPlane.translation, 0, 0, 2);
+  vec3.set(holo.translation, 0, 0, -5);
   gl.enable(gl.CULL_FACE);
   gl.enable(gl.DEPTH_TEST);
   gl.disable(gl.BLEND);
@@ -191,6 +193,7 @@ function drawMap () {
   gl.clearColor(0.0, 0, 0.1, 1.0);
   gl.clearDepth(1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  lfCam.focusCameras(vec3.fromValues(0,0,-2));
   lfCam.render(sceneA);
 }
 
@@ -226,7 +229,7 @@ function drawScene() {
     vCam.render(sceneB);
     // holo view
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.clearColor(0.1, 0.0, 0.0, 1.0);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clearDepth(1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.BLEND);
@@ -240,13 +243,15 @@ function enableControls () {
     let nDx = -2 * (e.offsetX / gl.canvas.offsetWidth) + 1;
     let nDy = 2 * (e.offsetY / gl.canvas.offsetHeight) - 1;
 
-    // vec3.set(planes.rotation, nDy * 180, -nDx * 180, 0);
-    // vec3.set(holo.rotation, nDy * 180, -nDx * 180, 0);
+    if (e.buttons) {
+      vec3.set(planes.rotation, nDy * 180, -nDx * 180, 0);
+      vec3.set(holo.rotation, nDy * 180, -nDx * 180, 0);
+    }
 
     //vec3.set(vCam.translation, -nDx, -nDy, 0);
 
-    vec3.set(planes.translation, -nDx * 2, -nDy * 2, -4);
-    vec3.set(holo.translation, -nDx * 2, -nDy * 2, -4);
+    // vec3.set(planes.translation, -nDx * 2, -nDy * 2, -4);
+    // vec3.set(holo.translation, -nDx * 2, -nDy * 2, -4);
     //vec3.set(otherTeapot.scale, nDy, nDy, nDy);
     // vec3.set(lfCam.rotation, 0, -nDx * 180, 0);
   };
@@ -254,7 +259,9 @@ function enableControls () {
   gl.canvas.addEventListener('wheel', function (e) {
     let scroll = 0.1 * Math.abs(e.deltaY)/e.deltaY;
     // offset the st plane to refocus at depth
-    vec3.add(stPlane.translation, stPlane.translation, vec3.fromValues(0, 0, scroll));
+    //vec3.add(stPlane.translation, stPlane.translation, vec3.fromValues(0, 0, scroll));
+    vec3.add(planes.translation, planes.translation, vec3.fromValues(0, 0, scroll));
+    vec3.add(holo.translation, holo.translation, vec3.fromValues(0, 0, scroll));
   });
 
   document.addEventListener('keyup', function (e) {

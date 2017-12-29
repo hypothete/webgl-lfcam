@@ -201,6 +201,17 @@ function LightFieldCamera (gl, name, fov, aspect, near, far, side, spread, helpe
       gl.bindBuffer(gl.ARRAY_BUFFER, cam.camPosBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cam.camPosArray), gl.STATIC_DRAW);
     },
+    focusCameras: function (worldPos) {
+      cam.updateMatrix();
+      let relPos = vec3.transformMat4(vec3.create(), worldPos, mat4.invert(mat4.create(), cam.matrix));
+      let up = vec3.fromValues(0, 1, 0);
+      for (let camera of cam.cameras) {
+        let camLookMatrix = mat4.lookAt(mat4.create(), camera.translation, relPos, up);
+        let camQuat = mat4.getRotation(quat.create(), camLookMatrix);
+        let camEul = quatToEuler(camQuat);
+        vec3.copy(camera.rotation, camEul);
+      }
+    },
     drawHelper: function () {
       cam.updateMatrix();
       mat4.multiply(modelViewMatrix, cam.matrix, viewMatrix);
@@ -255,13 +266,15 @@ function promiseTexture (gl, url) {
                     gl.RGBA, gl.UNSIGNED_BYTE, image);
 
       if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-         gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.generateMipmap(gl.TEXTURE_2D);
       }
       else {
-         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       }
       resolve(texture);
     };
@@ -309,4 +322,18 @@ function makeDepthBuffer (gl) {
 
 function isPowerOf2(value) {
   return (value & (value - 1)) == 0;
+}
+
+function quatToEuler(qq) {
+  let x = qq[0];
+  let y = qq[1];
+  let z = qq[2];
+  let w = qq[3];
+  let dx, dy, dz;
+  let eul = vec3.fromValues(
+    Math.atan2(2*y*w-2*x*z, 1 - 2*(y*y) - 2*(z*z)),
+    Math.asin(2*x*y + 2*z*w),
+    Math.atan2(2*x*w-2*y*z, 1 - 2*(x*x) - 2*(z*z))
+  );
+  return eul;
 }
