@@ -99,7 +99,7 @@ const lfCam = new LightFieldCamera(gl,
   Math.PI / 4,
   1/1,
   1.0, 100.0,
-  8,
+  17,
   0.1,
   helperShaderProgram,
   helperShaderLocations
@@ -128,8 +128,10 @@ Promise.all([
     bundle[0].text(),
     bundle[1].text(),
     promiseTexture(gl, './rednoise.png'),
-    //promiseTexture(gl, './ball.jpg'),
-    promiseTexture(gl, './dragon-uv.jpg'),
+    // promiseTexture(gl, './ball.jpg'),
+    // promiseTexture(gl, './dragon-uv.jpg'),
+    // promiseTexture(gl, './book.jpg'),
+    promiseTexture(gl, './lego-giant.jpg'),
     promiseTexture(gl, './bignoise.png')
   ]);
 })

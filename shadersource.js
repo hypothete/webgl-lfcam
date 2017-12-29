@@ -61,7 +61,7 @@ const uvplaneFrag = `
 
   void main() {
     float noise = texture2D(uTexture0, vTextureCoord).r;
-    float jitter = mix(-0.5/255.0, 0.5/255.0, noise);
+    float jitter = 0.0; // mix(-0.5/255.0, 0.5/255.0, noise);
     vec2 outColor = vTextureCoord + vec2(jitter);
     gl_FragColor = vec4(outColor, 0.0, 0.0);
   }
@@ -74,7 +74,7 @@ const stplaneFrag = `
 
   void main() {
     float noise = texture2D(uTexture0, vTextureCoord).r;
-    float jitter = mix(-0.5/255.0, 0.5/255.0, noise);
+    float jitter = 0.0; // mix(-0.5/255.0, 0.5/255.0, noise);
     vec2 outColor = vTextureCoord + vec2(jitter);
     gl_FragColor = vec4(0.0, 0.0, outColor);
   }
@@ -107,9 +107,9 @@ const holoPlaneFrag = `
   void main() {
     vec4 lookupTex = texture2D(uTexture1, gl_FragCoord.xy / uScreenSize);
 
-    // if (lookupTex.b <= 0.0) {
-    //   discard;
-    // }
+    if (lookupTex.b <= 0.0) {
+      discard;
+    }
 
     vec2 uv = lookupTex.rg;
     vec2 st = lookupTex.ba;
