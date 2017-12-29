@@ -23,7 +23,7 @@ const projectionMatrix = mat4.create();
 const normalMatrix = mat3.create();
 var matrixStack = [];
 
-var viewCode = 'c';
+var viewCode = 'a';
 
 const teapotShaderProgram = initShaderProgram(gl, teapotVert, teapotFrag);
 const teapotShaderLocations = {
@@ -100,7 +100,8 @@ const lfCam = new LightFieldCamera(gl,
   1/1,
   1.0, 100.0,
   17,
-  0.1,
+  0.15,
+  vec3.fromValues(0,0,-2),
   helperShaderProgram,
   helperShaderLocations
 );
@@ -172,8 +173,8 @@ Promise.all([
   gl.useProgram(holoPlaneShaderProgram);
   gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.screenSize, screenSize);
   gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.mapScale, mapScale);
-  //holoPlane.textures.push(sceneAfb.texture);
-  holoPlane.textures.push(secondBundle[3]);
+  holoPlane.textures.push(sceneAfb.texture);
+  //holoPlane.textures.push(secondBundle[3]);
   holoPlane.textures.push(sceneBfb.texture);
   vec3.set(holoPlane.translation, 0, 0, 2);
   vec3.set(holo.translation, 0, 0, -5);
@@ -195,7 +196,7 @@ function drawMap () {
   gl.clearColor(0.0, 0, 0.1, 1.0);
   gl.clearDepth(1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  lfCam.focusCameras(vec3.fromValues(0,0,-2));
+  lfCam.focusCameras();
   lfCam.render(sceneA);
 }
 
@@ -260,10 +261,12 @@ function enableControls () {
 
   gl.canvas.addEventListener('wheel', function (e) {
     let scroll = 0.1 * Math.abs(e.deltaY)/e.deltaY;
-    // offset the st plane to refocus at depth
-    //vec3.add(stPlane.translation, stPlane.translation, vec3.fromValues(0, 0, scroll));
-    vec3.add(planes.translation, planes.translation, vec3.fromValues(0, 0, scroll));
-    vec3.add(holo.translation, holo.translation, vec3.fromValues(0, 0, scroll));
+
+    vec3.add(lfCam.target, lfCam.target, vec3.fromValues(0, 0, scroll));
+    lfCam.focusCameras();
+    drawMap();
+    // vec3.add(planes.translation, planes.translation, vec3.fromValues(0, 0, scroll));
+    // vec3.add(holo.translation, holo.translation, vec3.fromValues(0, 0, scroll));
   });
 
   document.addEventListener('keyup', function (e) {

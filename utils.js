@@ -165,13 +165,13 @@ function Camera (gl, name, fov, aspect, near, far, viewport) {
   return cam;
 }
 
-function LightFieldCamera (gl, name, fov, aspect, near, far, side, spread, helperProgram, helperLocations, parent) {
+function LightFieldCamera (gl, name, fov, aspect, near, far, side, spread, target, helperProgram, helperLocations, parent) {
   let cam = {
     name,
     matrix: mat4.create(),
     translation: vec3.create(),
     rotation: vec3.create(),
-    fov, aspect, near, far, side, spread,
+    fov, aspect, near, far, side, spread, target,
     cameras: [],
     camPosArray: [],
     camPosBuffer: gl.createBuffer(),
@@ -201,14 +201,15 @@ function LightFieldCamera (gl, name, fov, aspect, near, far, side, spread, helpe
       gl.bindBuffer(gl.ARRAY_BUFFER, cam.camPosBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cam.camPosArray), gl.STATIC_DRAW);
     },
-    focusCameras: function (worldPos) {
+    focusCameras: function () {
       cam.updateMatrix();
-      let relPos = vec3.transformMat4(vec3.create(), worldPos, mat4.invert(mat4.create(), cam.matrix));
-      let up = vec3.fromValues(0, 1, 0);
+      let relPos = vec3.transformMat4(vec3.create(), cam.target, mat4.invert(mat4.create(), cam.matrix));
       for (let camera of cam.cameras) {
-        let camLookMatrix = mat4.lookAt(mat4.create(), camera.translation, relPos, up);
-        let camQuat = mat4.getRotation(quat.create(), camLookMatrix);
-        let camEul = quatToEuler(camQuat);
+        let camEul = vec3.fromValues(
+          -90 + (180 / Math.PI) * Math.atan2(camera.translation[2] - relPos[2],camera.translation[1] - relPos[1]),
+           90 - (180 / Math.PI) * Math.atan2(camera.translation[2] - relPos[2],camera.translation[0] - relPos[0]),
+          0
+        );
         vec3.copy(camera.rotation, camEul);
       }
     },
@@ -331,9 +332,9 @@ function quatToEuler(qq) {
   let w = qq[3];
   let dx, dy, dz;
   let eul = vec3.fromValues(
-    Math.atan2(2*y*w-2*x*z, 1 - 2*(y*y) - 2*(z*z)),
-    Math.asin(2*x*y + 2*z*w),
-    Math.atan2(2*x*w-2*y*z, 1 - 2*(x*x) - 2*(z*z))
+    (180 / Math.PI) * Math.atan2(2*y*w-2*x*z, 1 - 2*(y*y) - 2*(z*z)),
+    180 * Math.asin(2*x*y + 2*z*w),
+    (180 / Math.PI) * Math.atan2(2*x*w-2*y*z, 1 - 2*(x*x) - 2*(z*z))
   );
   return eul;
 }
