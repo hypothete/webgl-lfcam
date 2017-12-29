@@ -1,9 +1,13 @@
 const can = document.querySelector('canvas');
 const gl = can.getContext('webgl');
+const lfpicker = document.querySelector('#lfpicker');
 
 var teapot, stPlane, uvPlane,
   planes, otherTeapot, teapotPivot,
   holo, holoPlane;
+
+const loadedLightFields = [];
+var activeLightField = null;
 
 can.width = gl.canvas.clientWidth;
 can.height = gl.canvas.clientHeight;
@@ -13,9 +17,9 @@ const sceneB = new Scene(); // STUV planes
 const sceneC = new Scene(); // Final scene
 
 var sceneAfb = makeFramebuffer(gl); // buffer for storing sceneA
-const depthBufferA = makeDepthBuffer(gl);
+var depthBufferA = makeDepthBuffer(gl);
 var sceneBfb = makeFramebuffer(gl); // buffer for sceneB
-const depthBufferB = makeDepthBuffer(gl);
+var depthBufferB = makeDepthBuffer(gl);
 
 const viewMatrix = mat4.create();
 const modelViewMatrix = mat4.create();
@@ -23,7 +27,7 @@ const projectionMatrix = mat4.create();
 const normalMatrix = mat3.create();
 var matrixStack = [];
 
-var viewCode = 'a';
+var viewCode = 'c';
 
 const teapotShaderProgram = initShaderProgram(gl, teapotVert, teapotFrag);
 const teapotShaderLocations = {
@@ -114,14 +118,20 @@ Promise.all([
     bundle[0].text(),
     bundle[1].text(),
     promiseTexture(gl, './rednoise.png'),
-    // promiseTexture(gl, './ball.jpg'),
-    // promiseTexture(gl, './dragon-uv.jpg'),
-    // promiseTexture(gl, './book.jpg'),
-    // promiseTexture(gl, './lego-giant.jpg'),
-    promiseTexture(gl, './bignoise.png')
+    promiseTexture(gl, './ball.jpg'),
+    promiseTexture(gl, './dragon-uv.jpg'),
+    promiseTexture(gl, './book.jpg'),
+    promiseTexture(gl, './lego-giant.jpg')
   ]);
 })
 .then((secondBundle) => {
+  // add loaded textures to lib
+  addLoadedLightField('Scene A', sceneAfb.texture, 17);
+  addLoadedLightField('Crystal Ball', secondBundle[3], 17);
+  addLoadedLightField('Dragon', secondBundle[4], 8);
+  addLoadedLightField('Book', secondBundle[5], 16);
+  addLoadedLightField('Legos', secondBundle[6], 17);
+  activeLightField = loadedLightFields[0];
 
   // set up teapots in scene to be imaged
   const teapotMesh = new OBJ.Mesh(secondBundle[0]);
@@ -130,7 +140,6 @@ Promise.all([
   teapot = new Model(gl, 'teapot', teapotMesh, sceneA, teapotShaderProgram, teapotShaderLocations);
   teapot.textures.push(secondBundle[2]);
   vec3.set(teapot.translation, 0, 0, -2);
-
   teapotPivot = new Model(gl, 'pivot', null, teapot);
 
   otherTeapot = new Model(gl, 'other teapot', teapotMesh, teapotPivot, teapotShaderProgram, teapotShaderLocations);
@@ -156,12 +165,12 @@ Promise.all([
   gl.useProgram(holoPlaneShaderProgram);
   gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.screenSize, screenSize);
   gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.mapScale, mapScale);
-  holoPlane.textures.push(sceneAfb.texture);
+  holoPlane.textures.push(activeLightField.texture);
   holoPlane.textures.push(sceneBfb.texture);
   vec3.set(holoPlane.translation, 0, 0, 2);
   vec3.set(holo.translation, 0, 0, -5);
-  gl.enable(gl.CULL_FACE);
 
+  gl.enable(gl.CULL_FACE);
   drawMap();
   enableControls();
   animate();
@@ -246,16 +255,13 @@ function enableControls () {
 
   document.addEventListener('keyup', function (e) {
     if (e.keyCode == 65) {
-      // a
-      viewCode = 'a';
+      viewScene('a');
     }
     else if (e.keyCode == 66) {
-      // b
-      viewCode = 'b';
+      viewScene('b');
     }
     else if (e.keyCode == 67) {
-      // c
-      viewCode = 'c';
+      viewScene('c');
     }
   });
 
@@ -270,8 +276,31 @@ function enableControls () {
     gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.screenSize, screenSize);
     lfCam.updateViewports();
     sceneAfb = makeFramebuffer(gl);
+    depthBufferA = makeDepthBuffer(gl);
     sceneBfb = makeFramebuffer(gl);
-    holoPlane.textures[0] = sceneAfb.texture;
+    depthBufferB = makeDepthBuffer(gl);
+    loadedLightFields[0].texture = sceneAfb.texture;
+    holoPlane.textures[0] = activeLightField.texture;
     holoPlane.textures[1] = sceneBfb.texture;
   });
+
+  lfpicker.onchange = function () {
+    activeLightField = loadedLightFields[lfpicker.value];
+    holoPlane.textures[0] = activeLightField.texture;
+    const mapScale = new Float32Array([activeLightField.side, activeLightField.side]);
+    gl.useProgram(holoPlaneShaderProgram);
+    gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.mapScale, mapScale);
+  };
+}
+
+function addLoadedLightField (name, texture, side) {
+  loadedLightFields.push({ name, texture, side });
+  let pickerOption = document.createElement('option');
+  pickerOption.textContent = name;
+  pickerOption.value = loadedLightFields.length-1;
+  lfpicker.appendChild(pickerOption);
+}
+
+function viewScene (code) {
+  viewCode = code;
 }

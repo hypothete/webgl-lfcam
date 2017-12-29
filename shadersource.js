@@ -103,7 +103,7 @@ const holoPlaneFrag = `
       discard;
     }
 
-    vec2 uv = lookupTex.rg;
+    vec2 uv = vec2(1.0) - lookupTex.rg;
     vec2 st = lookupTex.ba;
     vec2 uvScale = uv * uMapScale;
     vec2 weight = fract(uvScale);

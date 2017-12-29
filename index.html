@@ -8,15 +8,45 @@
         margin: 0;
         overflow: hidden;
         background-color: #000;
+        width: 100vw;
+        height: 100vh;
+        font-family: sans-serif;
       }
       canvas {
         width: 100vw;
         height: 100vh;
       }
+      #menu {
+        position: absolute;
+        right: 2em;
+        bottom: 2em;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: flex-start;
+      }
+
+      #lfpicker {
+        margin-bottom: 2px;
+        width: 150px;
+      }
+
+      #menu > button {
+        margin-bottom: 2px;
+        width: 150px;
+      }
     </style>
   </head>
   <body>
     <canvas></canvas>
+    <div id="menu">
+      <select id="lfpicker">
+      </select>
+      <button onclick="viewScene('a')">lightfield cam</button>
+      <button onclick="viewScene('b')">STUV planes</button>
+      <button onclick="viewScene('c')">final output</button>
+    </div>
     <script src="vendor/gl-matrix.js" charset="utf-8"></script>
     <script src="vendor/webgl-obj-loader.js" charset="utf-8"></script>
     <script src="utils.js" charset="utf-8"></script>
