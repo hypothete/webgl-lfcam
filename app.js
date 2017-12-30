@@ -87,7 +87,7 @@ var noiseTexture;
 
 const lfCam = new LightFieldCamera(gl,
   'light field cam',
-  Math.PI / 4,
+  Math.PI / 3,
   1/1,
   1.0, 100.0,
   17,
