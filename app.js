@@ -90,8 +90,8 @@ const lfCam = new LightFieldCamera(gl,
   Math.PI / 3,
   1/1,
   1.0, 100.0,
-  17,
-  0.15,
+  9,
+  0.30,
   vec3.fromValues(0,0,-2)
 );
 vec3.set(lfCam.translation, 0, 0, 0);
@@ -126,11 +126,11 @@ Promise.all([
 })
 .then((secondBundle) => {
   // add loaded textures to lib
-  addLoadedLightField('Scene A', sceneAfb.texture, 17);
-  addLoadedLightField('Crystal Ball', secondBundle[3], 17);
-  addLoadedLightField('Dragon', secondBundle[4], 8);
-  addLoadedLightField('Book', secondBundle[5], 16);
-  addLoadedLightField('Legos', secondBundle[6], 17);
+  addLoadedLightField('Scene A', sceneAfb.texture, 17, 17);
+  addLoadedLightField('Crystal Ball', secondBundle[3], 17, 17);
+  addLoadedLightField('Dragon', secondBundle[4], 8, 8);
+  addLoadedLightField('Book', secondBundle[5], 16, 16);
+  addLoadedLightField('Legos', secondBundle[6], 17, 17);
   activeLightField = loadedLightFields[0];
 
   // set up teapots in scene to be imaged
@@ -288,14 +288,14 @@ function enableControls () {
   lfpicker.onchange = function () {
     activeLightField = loadedLightFields[lfpicker.value];
     holoPlane.textures[0] = activeLightField.texture;
-    const mapScale = new Float32Array([activeLightField.side, activeLightField.side]);
+    const mapScale = new Float32Array([activeLightField.sideX, activeLightField.sideY]);
     gl.useProgram(holoPlaneShaderProgram);
     gl.uniform2fv(holoPlaneShaderLocations.uniformLocations.mapScale, mapScale);
   };
 }
 
-function addLoadedLightField (name, texture, side) {
-  loadedLightFields.push({ name, texture, side });
+function addLoadedLightField (name, texture, sideX, sideY) {
+  loadedLightFields.push({ name, texture, sideX, sideY });
   let pickerOption = document.createElement('option');
   pickerOption.textContent = name;
   pickerOption.value = loadedLightFields.length-1;
