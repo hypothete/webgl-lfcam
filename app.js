@@ -119,18 +119,14 @@ Promise.all([
     bundle[1].text(),
     promiseTexture(gl, './rednoise.png'),
     promiseTexture(gl, './ball.jpg'),
-    promiseTexture(gl, './dragon-uv.jpg'),
-    promiseTexture(gl, './book.jpg'),
     promiseTexture(gl, './lego-giant.jpg')
   ]);
 })
 .then((secondBundle) => {
   // add loaded textures to lib
-  addLoadedLightField('Scene A', sceneAfb.texture, 17, 17);
+  addLoadedLightField('Scene A', sceneAfb.texture, 9, 9);
   addLoadedLightField('Crystal Ball', secondBundle[3], 17, 17);
-  addLoadedLightField('Dragon', secondBundle[4], 8, 8);
-  addLoadedLightField('Book', secondBundle[5], 16, 16);
-  addLoadedLightField('Legos', secondBundle[6], 17, 17);
+  addLoadedLightField('Legos', secondBundle[4], 17, 17);
   activeLightField = loadedLightFields[0];
 
   // set up teapots in scene to be imaged
@@ -205,6 +201,7 @@ function drawScene() {
     gl.clearColor(0.0, 0, 0.1, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     vec3.add(otherTeapot.rotation, otherTeapot.rotation, vec3.fromValues(0, 1, 0));
+    lfCam.focusCameras();
     lfCam.render(sceneA);
   }
   else if (viewCode === 'b') {
@@ -246,13 +243,6 @@ function enableControls () {
       vec3.set(holo.rotation, nDy * 90, -nDx * 90, 0);
     }
   };
-
-  gl.canvas.addEventListener('wheel', function (e) {
-    let scroll = 0.1 * Math.abs(e.deltaY)/e.deltaY;
-    vec3.add(lfCam.target, lfCam.target, vec3.fromValues(0, 0, scroll));
-    lfCam.focusCameras();
-    drawMap();
-  });
 
   document.addEventListener('keyup', function (e) {
     if (e.keyCode == 65) {

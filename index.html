@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title></title>
+    <title>Light field viewer</title>
     <style media="screen">
       body {
         margin: 0;
@@ -25,6 +25,20 @@
         flex-direction: column;
         align-items: flex-end;
         justify-content: flex-start;
+        max-width: 200px;
+      }
+
+      p {
+        color: #aaa;
+        font-size: 0.7em;
+      }
+
+      a {
+        color: #fff;
+      }
+
+      a:visited {
+        color: #888;
       }
 
       #lfpicker {
@@ -41,6 +55,15 @@
   <body>
     <canvas></canvas>
     <div id="menu">
+      <p>
+        This is a rudimentary light field renderer using the technique <a href="https://youtu.be/dMcZpeGOBPI" target="_blank" rel="noreferrer noopener">demonstrated at Siggraph '96</a>.
+      </p>
+      <p>
+        LEGOs and crystal ball images are from the <a href="http://lightfield.stanford.edu/lfs.html" target="_blank" rel="noreferrer noopener">Stanford Light Field Archive</a>.
+      </p>
+      <p>
+
+      </p>
       <select id="lfpicker">
       </select>
       <button onclick="viewScene('a')">lightfield cam</button>
